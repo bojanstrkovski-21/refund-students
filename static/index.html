@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Поврат на патни трошоци</title>
+  <style>
+    :root {
+      --primary: #286983;
+      --primary-hover: #1d5470;
+      --primary-light: #cfe4e8;
+      --primary-text: #1d5470;
+      --danger: #b4637a;
+      --ok: #3d7a4a;
+      --ok-bg: #e5f0e4;
+      --warn: #8a5a12;
+      --warn-bg: #f6ead2;
+      --bg: #b8cece;
+      --card: #d2e8e8;
+      --card-alt: #c4dcdc;
+      --hover-bg: #a8bebe;
+      --border: #c9c3cb;
+      --text: #575279;
+      --muted: #6e6980;
+      --shadow: 0 1px 3px rgba(60,40,80,0.08), 0 1px 2px rgba(60,40,80,0.06);
+      --on-primary: #fff;
+    }
+    html[data-theme="dark"] {
+      --primary: #719cd6;
+      --primary-hover: #8cb0e0;
+      --primary-light: #1e2d40;
+      --primary-text: #a3bce8;
+      --danger: #c94f6d;
+      --ok: #8fbc8f;
+      --ok-bg: #243528;
+      --warn: #e0b060;
+      --warn-bg: #3a2e1c;
+      --bg: #192330;
+      --card: #212e3f;
+      --card-alt: #1c2a39;
+      --hover-bg: #283d55;
+      --border: #2e3f55;
+      --text: #cdcecf;
+      --muted: #71839b;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --on-primary: #fff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5;
+    }
+    button, input, select { font-family: inherit; color: inherit; }
+    .hidden { display: none !important; }
+    .digits { font-variant-numeric: tabular-nums; letter-spacing: 0.4px; font-family: ui-monospace, Consolas, monospace; }
+    .money { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+    #loginScreen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .login-box {
+      width: 360px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px 26px; box-shadow: var(--shadow);
+    }
+    .login-top { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+    .login-logo {
+      width: 52px; height: 52px; border-radius: 14px; background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 14px;
+    }
+    .login-title { font-size: 20px; font-weight: 700; }
+    .login-school { color: var(--muted); font-size: 13px; margin: 4px 0 16px; }
+    .login-error {
+      display: none; background: rgba(180,99,122,0.15); color: var(--danger);
+      border: 1px solid var(--danger); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px;
+    }
+
+    .header {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: 0 20px; height: 62px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 40; box-shadow: var(--shadow);
+    }
+    .header-left, .header-actions { display: flex; align-items: center; gap: 8px; }
+    .header-icon {
+      width: 32px; height: 32px; border-radius: 8px; background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+    }
+    .header-title { font-size: 16px; font-weight: 700; line-height: 1.2; }
+    .header-school { font-size: 11px; color: var(--muted); }
+    .nav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 7px;
+      border: none; cursor: pointer; font-size: 13px; font-weight: 600; background: var(--card); color: var(--text);
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { border: 1px solid var(--border); }
+    .btn-secondary:hover, .btn-ghost:hover { background: var(--hover-bg); }
+    .btn-ghost { background: transparent; color: var(--muted); padding: 6px 9px; }
+    .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .theme-btn, .cal-btn {
+      background: none; border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; cursor: pointer;
+    }
+    .lang-toggle, .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+    .lang-btn, .view-btn {
+      padding: 6px 11px; border: none; background: var(--card); cursor: pointer; font-size: 12px;
+      font-weight: 700; color: var(--muted);
+    }
+    .lang-btn.active, .view-btn.active { background: var(--primary); color: #fff; }
+    .role-pill {
+      font-size: 11px; font-weight: 700; background: var(--primary-light); color: var(--primary-text);
+      border-radius: 99px; padding: 2px 8px;
+    }
+
+    .main { max-width: 1280px; margin: 0 auto; padding: 22px 20px 48px; }
+    .toolbar, .content-header, .card, .sheet, .module-shell {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
+    }
+    .toolbar { padding: 12px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-label, .form-group label {
+      font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    input, select {
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); outline: none; font-size: 13px;
+    }
+    input:focus, select:focus { border-color: var(--primary); }
+    input:disabled { opacity: 0.75; }
+    .toolbar-spacer { flex: 1; }
+    .content-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; margin-bottom: 10px; }
+    .results-count { color: var(--muted); font-size: 13px; }
+    .content-actions { display: flex; gap: 8px; }
+
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; }
+    th {
+      text-align: left; font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted);
+      padding: 9px 10px; background: var(--card-alt); border-bottom: 1px solid var(--border);
+    }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--hover-bg); }
+    .total-row td { font-weight: 700; background: var(--primary-light); color: var(--primary-text); }
+    .linkish { background: none; border: none; color: var(--primary-text); font-weight: 700; cursor: pointer; text-align: left; }
+    .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+
+    .sheet { padding: 18px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-row-3 { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .hint { font-size: 12px; color: var(--muted); }
+    .hint.warn { color: var(--warn); font-weight: 700; }
+    .digit-count { float: right; font-size: 11px; color: var(--muted); letter-spacing: 0; text-transform: none; }
+    .form-error {
+      display: none; background: rgba(180,99,122,0.15); color: var(--danger);
+      border: 1px solid var(--danger); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;
+    }
+    .bill-head, .bill-row, .bill-total {
+      display: grid; grid-template-columns: 36px 168px 150px 1fr 40px; gap: 8px; align-items: center;
+    }
+    .bill-period { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 4px 0 12px; }
+    .narrow-embg { width: 20ch; max-width: 100%; }
+    .narrow-account { width: 24ch; max-width: 100%; }
+    .account-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .bank-name { font-weight: 700; color: var(--primary-text); }
+    .date-wrap { display: flex; align-items: stretch; }
+    .date-wrap input { border-radius: 6px 0 0 6px; border-right: none; width: 118px; }
+    .cal-btn {
+      padding: 0 9px; border: 1px solid var(--border); border-radius: 0 6px 6px 0;
+      background: var(--card); cursor: pointer; color: var(--muted);
+    }
+    .cal-btn:hover { background: var(--hover-bg); color: var(--text); }
+    .app-cal-foot { display: flex; justify-content: space-between; margin-top: 8px; }
+    .amount-input { text-align: right; font-variant-numeric: tabular-nums; }
+    .app-cal {
+      position: fixed; z-index: 500; width: 280px; background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35); padding: 10px;
+    }
+    .app-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+    .app-cal-title { font-weight: 700; font-size: 14px; text-align: center; flex: 1; }
+    .app-cal-nav {
+      width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--card);
+      color: var(--text); cursor: pointer; font-size: 18px; line-height: 1;
+    }
+    .app-cal-nav:hover { background: var(--hover-bg); }
+    .app-cal-week, .app-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .app-cal-week span { text-align: center; font-size: 10px; font-weight: 700; color: var(--muted); padding: 4px 0; }
+    .app-cal-day {
+      border: none; background: transparent; color: var(--text); border-radius: 7px; height: 32px;
+      cursor: pointer; font-family: inherit; font-size: 13px;
+    }
+    .app-cal-day:hover { background: var(--hover-bg); }
+    .app-cal-day.muted, .app-cal-day:disabled { color: var(--muted); cursor: default; }
+    .app-cal-day.today { box-shadow: inset 0 0 0 1px var(--primary); }
+    .app-cal-day.selected, .app-cal-day.selected:hover { background: var(--primary); color: #fff; }
+    .bill-head { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 0 0 6px; }
+    .bill-row { margin-bottom: 6px; }
+    .bill-total {
+      margin-top: 8px; padding: 10px 8px; background: var(--primary-light); color: var(--primary-text);
+      border-radius: 8px; font-weight: 700;
+    }
+    .bill-total strong { font-size: 18px; }
+    .icon-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 18px; }
+
+    .banner { border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; }
+    .banner.ok { background: var(--ok-bg); color: var(--ok); }
+    .banner.warn { background: var(--warn-bg); color: var(--warn); }
+    .identity {
+      display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 12px; font-size: 13px;
+    }
+    .identity b { display: block; font-size: 10px; color: var(--muted); letter-spacing: 0.4px; text-transform: uppercase; }
+    .group-card { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+    .group-head { background: var(--card-alt); padding: 10px 12px; display: flex; justify-content: space-between; gap: 12px; }
+    .paid-mark { color: var(--ok); font-weight: 700; }
+    .sheet-title { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+    .print-head { margin-bottom: 12px; }
+    .print-school { font-size: 13px; font-weight: 700; }
+    .empty { padding: 28px; text-align: center; color: var(--muted); }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(20,24,32,0.45); display: flex; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal { width: min(560px, calc(100% - 24px)); background: var(--card); border-radius: 12px; border: 1px solid var(--border); }
+    .modal-header, .modal-footer { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header { border-bottom: 1px solid var(--border); font-weight: 700; }
+    .modal-footer { border-top: 1px solid var(--border); justify-content: flex-end; gap: 8px; }
+    .modal-body { padding: 16px; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+    .toast {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg);
+      padding: 10px 14px; border-radius: 8px; z-index: 70; max-width: 480px;
+    }
+    @media (max-width: 800px) {
+      .form-row, .form-row-3, .bill-head, .bill-row, .bill-total { grid-template-columns: 1fr; }
+      .header-school, .user-name { display: none; }
+    }
+    @media print {
+      body { background: #fff; color: #000; }
+      .no-print, .header, .toolbar, .content-header, #loginScreen, .toast, .modal-overlay { display: none !important; }
+      .main { max-width: none; padding: 0; }
+      #viewStudents, #viewSheet { display: none !important; }
+      .sheet, table, .group-card { box-shadow: none; }
+      @page { size: A4 landscape; margin: 12mm; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginScreen">
+    <div class="login-box">
+      <div class="login-top">
+        <button class="theme-btn" id="loginThemeBtn" onclick="toggleTheme()">🌙</button>
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="loginBtnMK" onclick="setLang('mk')">МК</button>
+          <button class="lang-btn" id="loginBtnEN" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
+      <div class="login-logo">ден</div>
+      <div class="login-title" data-i18n="appTitle">Поврат на патни трошоци</div>
+      <div class="login-school">СОУ „Таки Даскало“ - Битола</div>
+      <div class="login-error" id="loginError"></div>
+      <div class="form-group">
+        <label data-i18n="user">Корисник</label>
+        <input id="loginUsername" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group">
+        <label data-i18n="password">Лозинка</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()" data-i18n="login">Најава</button>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <header class="header no-print">
+      <div class="header-left">
+        <div class="header-icon">ден</div>
+        <div>
+          <div class="header-title" data-i18n="appTitle">Поврат на патни трошоци</div>
+          <div class="header-school">СОУ „Таки Даскало“ - Битола</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm nav-btn active" id="navStudents" onclick="goStudents()"><span data-i18n="students">Ученици</span></button>
+        <button class="btn btn-secondary btn-sm nav-btn" id="navReports" onclick="goReports()"><span data-i18n="reports">Извештаи</span></button>
+        <span class="user-name" id="userName"></span>
+        <span class="role-pill" id="rolePill"></span>
+        <button class="btn btn-secondary btn-sm" id="btnUsers" onclick="openUsers()"><span data-i18n="users">Корисници</span></button>
+        <button class="btn btn-ghost btn-sm" onclick="openPassword()"><span data-i18n="password">Лозинка</span></button>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()"><span data-i18n="logout">Одјава</span></button>
+        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="btnMK" onclick="setLang('mk')">МК</button>
+          <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section id="viewStudents">
+        <div class="toolbar no-print">
+          <div class="filter-group">
+            <span class="filter-label" data-i18n="search">Пребарај</span>
+            <input id="searchInput" data-i18n-ph="searchPh" placeholder="Презиме, родител, ЕМБГ, сметка" oninput="onSearch()">
+          </div>
+          <div class="filter-group">
+            <span class="filter-label" data-i18n="year">Година</span>
+            <select id="listYear" onchange="loadStudents()"></select>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-primary" onclick="openSheet(null)">＋ <span data-i18n="addStudent">Додади ученик</span></button>
+        </div>
+        <div class="content-header no-print">
+          <div class="results-count" id="studentCount"></div>
+        </div>
+        <div id="studentList"></div>
+      </section>
+
+      <section id="viewSheet" class="hidden">
+        <div class="sheet">
+          <div class="content-actions no-print" style="margin-bottom:12px">
+            <button class="btn btn-secondary btn-sm" onclick="goStudents()">← <span data-i18n="back">Назад</span></button>
+            <div class="toolbar-spacer"></div>
+            <button class="btn btn-secondary btn-sm hidden" id="btnSheetReport" onclick="reportThisStudent()"><span data-i18n="openReport">Извештај</span></button>
+            <button class="btn btn-danger btn-sm hidden" id="btnDeleteStudent" onclick="deleteStudent()"><span data-i18n="delete">Избриши</span></button>
+          </div>
+          <div class="sheet-title" id="sheetTitle" data-i18n="newStudent">Нов ученик</div>
+          <p class="hint" id="sheetLead" style="margin-bottom:14px" data-i18n="sheetLead">Сметките се внесуваат по датум. Вкупно е долу.</p>
+          <div class="form-error" id="sheetError"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label data-i18n="lastName">Презиме</label>
+              <input id="sLast" oninput="dirty=true">
+            </div>
+            <div class="form-group">
+              <label data-i18n="firstName">Име</label>
+              <input id="sFirst" oninput="dirty=true">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label data-i18n="parent">Родител</label>
+              <input id="sParent" oninput="dirty=true">
+            </div>
+            <div class="form-group">
+              <label data-i18n="className">Клас</label>
+              <div class="account-line">
+                <select id="sYear" onchange="dirty=true"></select>
+                <select id="sSection" onchange="dirty=true"></select>
+              </div>
+              <span class="hint" data-i18n="classHelp">4 години, 12 паралелки: I-3, II-8, III-11, IV-7.</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label><span data-i18n="embg">ЕМБГ на родител</span> <span class="digit-count" id="embgCount">0/13</span></label>
+              <input id="sEmbg" class="digits narrow-embg" maxlength="13" inputmode="numeric" autocomplete="off" oninput="digitsField(this,13,'embgCount')">
+              <span class="hint" id="embgHint" data-i18n="embgHelp">Не е задолжително. 13 цифри, без празни места.</span>
+            </div>
+            <div class="form-group">
+              <label><span data-i18n="account">Трансакциска сметка</span> <span class="digit-count" id="accountCount">0/15</span></label>
+              <div class="account-line">
+                <input id="sAccount" class="digits narrow-account" maxlength="15" inputmode="numeric" autocomplete="off" oninput="digitsField(this,15,'accountCount')">
+                <span class="bank-name" id="bankName"></span>
+              </div>
+              <span class="hint" id="accountHint" data-i18n="accountHelp">Не е задолжително. 15 цифри, без празни места.</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-i18n="note">Забелешка</label>
+            <input id="sNotes" oninput="dirty=true">
+          </div>
+          <div class="bill-period">
+            <div class="filter-group">
+              <span class="filter-label" data-i18n="billMonth">Месец за сметки</span>
+              <select id="billMonth" onchange="changeBillPeriod()"></select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label" data-i18n="year">Година</span>
+              <select id="billYear" onchange="changeBillPeriod()"></select>
+            </div>
+            <span class="hint" data-i18n="billMonthHelp">Датумите и листата се само за избраниот месец. Другите месеци остануваат зачувани.</span>
+          </div>
+          <div class="bill-head">
+            <span>#</span>
+            <span data-i18n="date">Датум</span>
+            <span data-i18n="amount">Износ</span>
+            <span data-i18n="note">Забелешка</span>
+            <span></span>
+          </div>
+          <div id="billRows"></div>
+          <div class="bill-total">
+            <span data-i18n="total">Вкупно</span>
+            <span></span>
+            <strong id="sheetTotal">0,00</strong>
+            <span>ден.</span>
+            <span></span>
+          </div>
+          <div class="content-actions no-print" style="margin-top:12px">
+            <button class="btn btn-secondary" onclick="addBillRow()">＋ <span data-i18n="addBill">Додади сметка</span></button>
+            <div class="toolbar-spacer"></div>
+            <button class="btn btn-primary" id="btnSave" onclick="saveSheet()" data-i18n="save">Зачувај</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="viewReports" class="hidden">
+        <div class="toolbar no-print">
+          <div class="view-toggle" id="reportTypes">
+            <button class="view-btn active" data-type="month" onclick="setReportType('month')"><span data-i18n="repMonth">Месечен преглед</span></button>
+            <button class="view-btn" data-type="month-bills" onclick="setReportType('month-bills')"><span data-i18n="repBills">Сметки</span></button>
+            <button class="view-btn" data-type="student-month" onclick="setReportType('student-month')"><span data-i18n="repStudentMonth">Ученик / месец</span></button>
+            <button class="view-btn" data-type="student" onclick="setReportType('student')"><span data-i18n="repStudent">Ученик / родител</span></button>
+            <button class="view-btn" data-type="year" onclick="setReportType('year')"><span data-i18n="repYear">Година</span></button>
+          </div>
+          <div class="filter-group" id="yearFilter">
+            <span class="filter-label" data-i18n="year">Година</span>
+            <select id="reportYear" onchange="loadReport()"></select>
+          </div>
+          <div class="filter-group" id="monthFilter">
+            <span class="filter-label" data-i18n="month">Месец</span>
+            <select id="reportMonth" onchange="loadReport()"></select>
+          </div>
+          <div class="filter-group hidden" id="studentFilter">
+            <span class="filter-label" data-i18n="student">Ученик</span>
+            <select id="reportStudent" onchange="loadReport()"></select>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="exportReport()">↓ <span data-i18n="excel">Excel</span></button>
+          <button class="btn btn-secondary btn-sm" onclick="window.print()"><span data-i18n="print">Печати</span></button>
+        </div>
+        <div class="sheet" id="reportSheet">
+          <div class="empty" data-i18n="pickReport">Изберете извештај.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-overlay hidden" id="usersOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span data-i18n="users">Корисници</span>
+        <button class="modal-close" onclick="closeUsers()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-error" id="userError"></div>
+        <div id="usersTable"></div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-group"><label data-i18n="user">Корисник</label><input id="newUsername"></div>
+          <div class="form-group"><label data-i18n="password">Лозинка</label><input id="newPassword" type="password"></div>
+        </div>
+        <div class="form-group">
+          <label data-i18n="role">Улога</label>
+          <select id="newRole"><option value="user" data-i18n="roleUser">корисник</option><option value="admin" data-i18n="roleAdmin">админ</option></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="createUser()" data-i18n="addUser">Додади корисник</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="passwordOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span data-i18n="changePassword">Смени лозинка</span>
+        <button class="modal-close" onclick="closePassword()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-error" id="passwordError"></div>
+        <div class="form-group"><label data-i18n="currentPassword">Сегашна лозинка</label><input id="currentPassword" type="password"></div>
+        <div class="form-group"><label data-i18n="newPassword">Нова лозинка</label><input id="newPasswordOwn" type="password"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="savePassword()" data-i18n="save">Зачувај</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <div id="appCalendar" class="app-cal hidden" role="dialog">
+    <div class="app-cal-head">
+      <button type="button" class="app-cal-nav" id="calPrev" onclick="shiftCalendar(-1)">‹</button>
+      <div class="app-cal-title" id="calTitle"></div>
+      <button type="button" class="app-cal-nav" id="calNext" onclick="shiftCalendar(1)">›</button>
+    </div>
+    <div class="app-cal-week" id="calWeek"></div>
+    <div class="app-cal-grid" id="calGrid"></div>
+    <div class="app-cal-foot"><button type="button" class="btn btn-ghost btn-sm" id="calClear" onclick="clearBillDate()"></button></div>
+  </div>
+
+<script>
+const SCHOOL = 'СОУ „Таки Даскало“ - Битола';
+const BANKS = {
+  '200': 'Стопанска Банка АД Скопје', '210': 'НЛБ Банка АД Скопје', '240': 'УНИ Банка АД Скопје',
+  '250': 'Шпаркасе Банка АД Скопје', '270': 'Халк Банка АД Скопје', '280': 'Силк Роуд Банка АД Скопје',
+  '290': 'ТТК Банка АД Скопје', '300': 'Комерцијална Банка АД Скопје',
+  '320': 'Централна Кооперативна Банка АД Скопје', '330': 'Капитал Банка АД Скопје',
+  '380': 'Прокредит Банка АД Скопје', '500': 'АЛТА Банка АД Битола',
+  '630': 'Министерство за финансии Трезор', '660': 'ФЗОРСМ Трезор'
+};
+const CAL_DAYS = { mk: ['П', 'В', 'С', 'Ч', 'П', 'С', 'Н'], en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'] };
+let calState = null;
+const MONTHS = {
+  mk: ['', 'јануари', 'февруари', 'март', 'април', 'мај', 'јуни', 'јули', 'август', 'септември', 'октомври', 'ноември', 'декември'],
+  en: ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+};
+const S = {
+  mk: {
+    appTitle: 'Поврат на патни трошоци', user: 'Корисник', password: 'Лозинка', login: 'Најава', logout: 'Одјава',
+    students: 'Ученици', reports: 'Извештаи', users: 'Корисници', search: 'Пребарај',
+    searchPh: 'Презиме, родител, ЕМБГ, сметка', year: 'Година', allYears: 'Сите години',
+    addStudent: 'Додади ученик', back: 'Назад', delete: 'Избриши', openReport: 'Извештај',
+    newStudent: 'Нов ученик', sheetLead: 'Сметките се внесуваат по датум. Вкупно е долу.',
+    lastName: 'Презиме', firstName: 'Име', parent: 'Родител', className: 'Клас', classHelp: '4 години, 12 паралелки: I-3, II-8, III-11, IV-7.', schoolYear: 'Година', section: 'Паралелка', embg: 'ЕМБГ на родител',
+    embgHelp: 'Не е задолжително. 13 цифри, без празни места. За 1–9, нулата од напред останува.',
+    embgWarn: 'Контролната цифра не се совпаѓа. Може да се зачува, проверете го бројот.',
+    account: 'Трансакциска сметка', accountHelp: 'Не е задолжително. 15 цифри, без празни места. Нулите од напред остануваат.',
+    note: 'Забелешка', date: 'Датум', amount: 'Износ', total: 'Вкупно', addBill: 'Додади сметка',
+    save: 'Зачувај', month: 'Месец', student: 'Ученик', excel: 'Excel', print: 'Печати',
+    repMonth: 'Месечен преглед', repBills: 'Сметки', repStudentMonth: 'Ученик / месец',
+    repStudent: 'Ученик / родител', repYear: 'Година', pickReport: 'Изберете извештај.',
+    pickStudent: 'Изберете ученик', bills: 'Сметки', amountDen: 'Износ (ден.)',
+    noStudents: 'Нема ученици.', noBills: 'Нема сметки за овој период.',
+    markPaid: 'Означи го месецот како платен', remarkPaid: 'Означи повторно', unmarkPaid: 'Тргни платено',
+    paidOn: 'Платено', paidBy: 'од', stale: 'Износот е сменет по исплатата.',
+    confirmPay: 'Да се означи целиот месец како платен за сите ученици?',
+    confirmUnpay: 'Да се тргне ознаката платено за целиот месец?',
+    confirmDelete: 'Да се избрише ученикот и сите негови сметки?',
+    unsaved: 'Има незачувани промени. Да се откажат?',
+    role: 'Улога', roleUser: 'корисник', roleAdmin: 'админ', addUser: 'Додади корисник',
+    changePassword: 'Смени лозинка', currentPassword: 'Сегашна лозинка', newPassword: 'Нова лозинка',
+    saved: 'Зачувано.', nothingNew: 'Нема нови сметки.', count: 'ученици',
+    studentMonthTitle: 'Сметки за месецот', yearTitle: 'Годишен извештај', allBills: 'Сите сметки',
+    billMonth: 'Месец за сметки', billMonthHelp: 'Датумите и листата се само за избраниот месец. Другите месеци остануваат зачувани.',
+    clearDate: 'Избриши', datePh: 'дд.мм.гггг'
+  },
+  en: {
+    appTitle: 'Travel expense refunds', user: 'User', password: 'Password', login: 'Log in', logout: 'Log out',
+    students: 'Students', reports: 'Reports', users: 'Users', search: 'Search',
+    searchPh: 'Name, parent, ID, account', year: 'Year', allYears: 'All years',
+    addStudent: 'Add student', back: 'Back', delete: 'Delete', openReport: 'Report',
+    newStudent: 'New student', sheetLead: 'Enter each paid bill by date. The total is at the bottom.',
+    lastName: 'Last name', firstName: 'First name', parent: 'Parent', className: 'Class', classHelp: '4 years, 12 sections: I-3, II-8, III-11, IV-7.', schoolYear: 'Year', section: 'Section', embg: 'Parent ID (EMBG)',
+    embgHelp: 'Optional. 13 digits, no spaces. Days 1–9 keep the leading zero.',
+    embgWarn: 'The check digit does not match. You can still save it. Check the number.',
+    account: 'Bank account', accountHelp: 'Optional. 15 digits, no spaces. Leading zeros are kept.',
+    note: 'Note', date: 'Date', amount: 'Amount', total: 'Total', addBill: 'Add bill',
+    save: 'Save', month: 'Month', student: 'Student', excel: 'Excel', print: 'Print',
+    repMonth: 'Month summary', repBills: 'Bills', repStudentMonth: 'Student / month',
+    repStudent: 'Student / parent', repYear: 'Year', pickReport: 'Choose a report.',
+    pickStudent: 'Choose a student', bills: 'Bills', amountDen: 'Amount (MKD)',
+    noStudents: 'No students.', noBills: 'No bills for this period.',
+    markPaid: 'Mark the whole month paid', remarkPaid: 'Mark again', unmarkPaid: 'Clear paid',
+    paidOn: 'Paid', paidBy: 'by', stale: 'The amount changed after it was marked paid.',
+    confirmPay: 'Mark this whole month paid for every student?',
+    confirmUnpay: 'Clear the paid mark for the whole month?',
+    confirmDelete: 'Delete this student and every bill?',
+    unsaved: 'There are unsaved changes. Discard them?',
+    role: 'Role', roleUser: 'user', roleAdmin: 'admin', addUser: 'Add user',
+    changePassword: 'Change password', currentPassword: 'Current password', newPassword: 'New password',
+    saved: 'Saved.', nothingNew: 'No new bills.', count: 'students',
+    studentMonthTitle: 'Bills for the month', yearTitle: 'Year report', allBills: 'All bills',
+    billMonth: 'Bill month', billMonthHelp: 'Dates and the list are only for the chosen month. Other months stay saved.',
+    clearDate: 'Clear', datePh: 'dd.mm.yyyy'
+  }
+};
+const ERR = {
+  mk: {
+    bad_login: 'Погрешно корисничко име или лозинка', embg_length: 'ЕМБГ мора да има точно 13 цифри', embg_spaces: 'ЕМБГ не смее да има празни места', embg_digits: 'ЕМБГ може да има само цифри',
+    embg_date: 'Датумот во ЕМБГ не е валиден', account_length: 'Сметката мора да има точно 15 цифри',
+    duplicate: 'Овој ученик со истиот ЕМБГ веќе постои', forbidden: 'Само администратор може да го смени ова', account_spaces: 'Сметката не смее да има празни места', account_digits: 'Сметката може да има само цифри',
+    empty_month: 'Нема сметки за тој месец', amount_positive: 'Износот мора да е поголем од нула',
+    amount_required: 'Внесете износ', date_required: 'Внесете датум', bad_date: 'Невалиден датум',
+    bad_amount: 'Невалиден износ', last_name_required: 'Внесете презиме', first_name_required: 'Внесете име',
+    parent_required: 'Внесете родител', bad_class: 'Изберете година I–IV и паралелка 1–12', not_found: 'Не е најдено', user_exists: 'Корисникот веќе постои',
+    user_required: 'Внесете корисник и лозинка', password_required: 'Внесете нова лозинка',
+    bad_password: 'Сегашната лозинка не е точна', last_admin: 'Последниот администратор не може да се избрише',
+    cannot_delete_self: 'Не можете да се избришете себеси', student_required: 'Изберете ученик', unauthorized: 'Најавете се',
+    bill_outside_month: 'Датумот мора да е во избраниот месец', bad_year: 'Невалидна година', bad_month: 'Невалиден месец'
+  },
+  en: {
+    bad_login: 'Wrong username or password', embg_length: 'EMBG must be exactly 13 digits', embg_spaces: 'EMBG cannot contain spaces', embg_digits: 'EMBG can contain digits only',
+    embg_date: 'The date inside the EMBG is not valid', account_length: 'The account must be exactly 15 digits',
+    duplicate: 'This student with the same EMBG already exists', forbidden: 'Only an admin can change this', account_spaces: 'The account cannot contain spaces', account_digits: 'The account can contain digits only',
+    empty_month: 'There are no bills for that month', amount_positive: 'The amount must be greater than zero',
+    amount_required: 'Enter an amount', date_required: 'Enter a date', bad_date: 'Invalid date',
+    bad_amount: 'Invalid amount', last_name_required: 'Enter a last name', first_name_required: 'Enter a first name',
+    parent_required: 'Enter the parent', bad_class: 'Choose a year I–IV and a section 1–12', not_found: 'Not found', user_exists: 'That user already exists',
+    user_required: 'Enter a username and password', password_required: 'Enter a new password',
+    bad_password: 'The current password is wrong', last_admin: 'The last admin cannot be deleted',
+    cannot_delete_self: 'You cannot delete your own account', student_required: 'Choose a student', unauthorized: 'Log in',
+    bill_outside_month: 'The date must be in the chosen month', bad_year: 'Invalid year', bad_month: 'Invalid month'
+  }
+};
+
+let lang = localStorage.getItem('refund-lang') || 'mk';
+let theme = localStorage.getItem('refund-theme') || 'light';
+let currentUser = null;
+let students = [];
+let reportStudents = [];
+let years = [];
+let sheetId = null;
+let sheetAllBills = [];
+let sheetBills = [];
+let savedBills = [];
+let activePeriod = null;
+let dirty = false;
+let reportType = 'month';
+let reportData = null;
+let searchTimer = null;
+let toastTimer = null;
+
+const t = key => (S[lang] && S[lang][key]) || key;
+const isAdmin = () => currentUser && currentUser.role === 'admin';
+const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+function bankName(account) {
+  const digits = String(account || '').replace(/\D/g, '');
+  return digits.length >= 3 ? (BANKS[digits.slice(0, 3)] || '') : '';
+}
+function previousPeriod() {
+  const now = new Date();
+  const month = now.getMonth() === 0 ? 12 : now.getMonth();
+  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  return { year, month };
+}
+function billPeriod() {
+  const picked = previousPeriod();
+  return {
+    year: Number(document.getElementById('billYear').value) || picked.year,
+    month: Number(document.getElementById('billMonth').value) || picked.month
+  };
+}
+function fillClassSelects() {
+  const years = ['I', 'II', 'III', 'IV'];
+  const year = document.getElementById('sYear');
+  const section = document.getElementById('sSection');
+  const currentYear = year.value;
+  const currentSection = section.value;
+  year.innerHTML = `<option value="">${esc(t('schoolYear'))}</option>` +
+    years.map(item => `<option value="${item}">${item}</option>`).join('');
+  section.innerHTML = `<option value="">${esc(t('section'))}</option>` +
+    Array.from({length: 12}, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join('');
+  year.value = currentYear;
+  section.value = currentSection;
+}
+function setClass(value) {
+  const [year, section] = String(value || '').split('-');
+  document.getElementById('sYear').value = ['I', 'II', 'III', 'IV'].includes(year) ? year : '';
+  document.getElementById('sSection').value = section && Number(section) >= 1 && Number(section) <= 12 ? section : '';
+}
+function classValue() {
+  const year = document.getElementById('sYear').value;
+  const section = document.getElementById('sSection').value;
+  if (!year && !section) return '';
+  if (!year || !section) return showError('sheetError', errText('bad_class'));
+  return year + '-' + section;
+}
+function todayIso() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const parts = iso.slice(0, 10).split('-');
+  return parts.length === 3 ? parts[2] + '.' + parts[1] + '.' + parts[0] : iso;
+}
+function fmtMoney(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  const neg = n < 0;
+  const [whole, frac] = Math.abs(n).toFixed(2).split('.');
+  return (neg ? '-' : '') + whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + frac;
+}
+function parseAmount(raw) {
+  if (raw == null || raw === '') return null;
+  let text = String(raw).replace(/\s/g, '');
+  if (text.includes(',') && text.includes('.')) {
+    text = text.lastIndexOf(',') > text.lastIndexOf('.')
+      ? text.replace(/\./g, '').replace(',', '.')
+      : text.replace(/,/g, '');
+  } else if (text.includes(',')) text = text.replace(',', '.');
+  else if ((text.match(/\./g) || []).length > 1) text = text.replace(/\./g, '');
+  else if ((text.match(/\./g) || []).length === 1) {
+    const [left, right] = text.split('.');
+    if (right.length === 3 && /^\d+$/.test(left) && /^\d+$/.test(right)) text = left + right;
+  }
+  const n = Number(text);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+function embgOk(number) {
+  if (!/^\d{13}$/.test(number)) return false;
+  const weights = [7, 6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  let total = 0;
+  for (let i = 0; i < 12; i++) total += Number(number[i]) * weights[i];
+  let check = 11 - (total % 11);
+  if (check >= 10) check = 0;
+  return check === Number(number[12]);
+}
+function monthLabel(month) { return (MONTHS[lang] || MONTHS.mk)[month] || ''; }
+function errText(code) { return (ERR[lang] && ERR[lang][code]) || code || t('not_found'); }
+async function readError(res) {
+  const data = await res.json().catch(() => ({}));
+  return errText(data.code || data.error);
+}
+function toast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+}
+function showError(id, message) {
+  const el = document.getElementById(id);
+  el.textContent = message;
+  el.style.display = message ? 'block' : 'none';
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : '';
+  if (theme !== 'dark') delete document.documentElement.dataset.theme;
+  const mark = theme === 'dark' ? '☀' : '🌙';
+  document.querySelectorAll('.theme-btn').forEach(btn => { btn.textContent = mark; });
+}
+function toggleTheme() {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('refund-theme', theme);
+  applyTheme();
+}
+function applyLang() {
+  document.documentElement.lang = lang === 'en' ? 'en' : 'mk';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.id.endsWith(lang.toUpperCase()) || btn.id.endsWith('Btn' + lang.toUpperCase())));
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === (lang === 'en' ? 'EN' : 'МК'));
+  });
+  fillMonthSelect();
+  if (document.getElementById('billMonth').options.length) {
+    const current = document.getElementById('billMonth').value;
+    [...document.getElementById('billMonth').options].forEach(opt => { opt.textContent = monthLabel(Number(opt.value)); });
+    document.getElementById('billMonth').value = current;
+  }
+  fillClassSelects();
+  if (currentUser) renderStudents();
+  if (reportData) renderReport();
+  updateSheetChrome();
+}
+function setLang(next) {
+  lang = next;
+  localStorage.setItem('refund-lang', lang);
+  applyLang();
+}
+
+async function checkAuth() {
+  const res = await fetch('/api/me');
+  if (!res.ok) { showLogin(); return; }
+  currentUser = await res.json();
+  showApp();
+}
+function showLogin() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+function showApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('userName').textContent = currentUser.username;
+  document.getElementById('rolePill').textContent = currentUser.role === 'admin' ? t('roleAdmin') : t('roleUser');
+  document.getElementById('btnUsers').classList.toggle('hidden', !isAdmin());
+  goStudents();
+}
+async function doLogin() {
+  const res = await fetch('/api/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: document.getElementById('loginUsername').value.trim(),
+      password: document.getElementById('loginPassword').value
+    })
+  });
+  if (!res.ok) { showError('loginError', await readError(res)); return; }
+  currentUser = await res.json();
+  showError('loginError', '');
+  document.getElementById('loginPassword').value = '';
+  showApp();
+}
+async function doLogout() {
+  if (!guardDirty()) return;
+  await fetch('/api/logout', { method: 'POST' });
+  currentUser = null;
+  showLogin();
+}
+
+function guardDirty() {
+  if (!dirty) return true;
+  if (!confirm(t('unsaved'))) return false;
+  dirty = false;
+  return true;
+}
+function setNav(name) {
+  document.getElementById('navStudents').classList.toggle('active', name === 'students');
+  document.getElementById('navReports').classList.toggle('active', name === 'reports');
+  document.getElementById('viewStudents').classList.toggle('hidden', name !== 'students');
+  document.getElementById('viewSheet').classList.toggle('hidden', name !== 'sheet');
+  document.getElementById('viewReports').classList.toggle('hidden', name !== 'reports');
+}
+function goStudents() {
+  if (!guardDirty()) return;
+  setNav('students');
+  loadStudents();
+}
+function goReports() {
+  if (!guardDirty()) return;
+  setNav('reports');
+  loadReport();
+}
+
+async function loadYears() {
+  const res = await fetch('/api/years');
+  years = res.ok ? await res.json() : [new Date().getFullYear()];
+  fillYearSelect('listYear', true);
+  fillYearSelect('reportYear', false);
+  fillMonthSelect();
+}
+function fillYearSelect(id, includeAll) {
+  const sel = document.getElementById(id);
+  const cur = sel.value === '' && includeAll ? '' : (sel.value || String(new Date().getFullYear()));
+  sel.innerHTML = '';
+  if (includeAll) {
+    const all = document.createElement('option');
+    all.value = '';
+    all.textContent = t('allYears');
+    sel.appendChild(all);
+  }
+  years.forEach(year => {
+    const opt = document.createElement('option');
+    opt.value = year;
+    opt.textContent = year;
+    sel.appendChild(opt);
+  });
+  sel.value = [...sel.options].some(opt => opt.value === cur) ? cur : String(new Date().getFullYear());
+}
+function fillMonthSelect() {
+  const sel = document.getElementById('reportMonth');
+  if (!sel) return;
+  const cur = sel.value || String(new Date().getMonth() + 1);
+  sel.innerHTML = '';
+  for (let month = 1; month <= 12; month++) {
+    const opt = document.createElement('option');
+    opt.value = month;
+    opt.textContent = monthLabel(month);
+    sel.appendChild(opt);
+  }
+  sel.value = cur;
+}
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadStudents, 250);
+}
+async function loadStudents() {
+  await loadYears();
+  const params = new URLSearchParams();
+  const search = document.getElementById('searchInput').value.trim();
+  const year = document.getElementById('listYear').value;
+  if (search) params.set('search', search);
+  if (year) params.set('year', year);
+  const res = await fetch('/api/students?' + params);
+  if (res.status === 401) { showLogin(); return; }
+  students = await res.json();
+  const all = await fetch('/api/students');
+  reportStudents = all.ok ? await all.json() : students;
+  fillStudentSelect();
+  renderStudents();
+}
+function fillStudentSelect() {
+  const sel = document.getElementById('reportStudent');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = t('pickStudent');
+  sel.appendChild(blank);
+  reportStudents.forEach(student => {
+    const opt = document.createElement('option');
+    opt.value = student.id;
+    opt.textContent = student.last_name + ' ' + student.first_name + (student.class_name ? ' (' + student.class_name + ')' : '') + ' — ' + student.parent_name;
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(opt => opt.value === cur)) sel.value = cur;
+}
+function renderStudents() {
+  const el = document.getElementById('studentList');
+  document.getElementById('studentCount').textContent = students.length + ' ' + t('count');
+  if (!students.length) {
+    el.innerHTML = '<div class="empty">' + esc(t('noStudents')) + '</div>';
+    return;
+  }
+  const rows = students.map((student, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td><button class="linkish" onclick="openSheet(${student.id})">${esc(student.last_name)}${student.class_name ? ' · ' + esc(student.class_name) : ''}</button></td>
+      <td>${esc(student.first_name)}</td>
+      <td>${esc(student.class_name || '')}</td>
+      <td>${esc(student.parent_name)}</td>
+      <td class="digits">${esc(student.parent_embg || '')}</td>
+      <td class="digits">${esc(student.bank_account || '')}${student.bank_name ? `<div class="hint">${esc(student.bank_name)}</div>` : ''}</td>
+      <td class="money">${student.bill_count}</td>
+      <td class="money">${fmtMoney(student.total)}</td>
+    </tr>`).join('');
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>#</th><th>${esc(t('lastName'))}</th><th>${esc(t('firstName'))}</th><th>${esc(t('className'))}</th><th>${esc(t('parent'))}</th>
+      <th>${esc(t('embg'))}</th><th>${esc(t('account'))}</th><th>${esc(t('bills'))}</th><th>${esc(t('amountDen'))}</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function digitsField(el, max, countId) {
+  const hadSpace = /\s/.test(el.value);
+  el.value = el.value.replace(/\D/g, '').slice(0, max);
+  document.getElementById(countId).textContent = el.value.length + '/' + max;
+  dirty = true;
+  if (hadSpace) {
+    const hint = document.getElementById(el.id === 'sEmbg' ? 'embgHint' : 'accountHint');
+    hint.textContent = el.id === 'sEmbg' ? errText('embg_spaces') : errText('account_spaces');
+    hint.classList.add('warn');
+    return;
+  }
+  if (el.id === 'sEmbg') {
+    const hint = document.getElementById('embgHint');
+    const bad = el.value.length === 13 && !embgOk(el.value);
+    hint.textContent = bad ? t('embgWarn') : t('embgHelp');
+    hint.classList.toggle('warn', bad);
+  } else {
+    const hint = document.getElementById('accountHint');
+    hint.textContent = t('accountHelp');
+    hint.classList.remove('warn');
+    document.getElementById('bankName').textContent = bankName(el.value);
+  }
+}
+function blankBill() {
+  const period = billPeriod();
+  return { id: null, bill_date: '', amount: '', note: '', draftYear: period.year, draftMonth: period.month };
+}
+function billInPeriod(bill, period) {
+  if (!bill.bill_date) return bill.draftYear === period.year && bill.draftMonth === period.month;
+  return bill.bill_date.slice(0, 7) === period.year + '-' + String(period.month).padStart(2, '0');
+}
+function fillBillPeriod() {
+  const period = previousPeriod();
+  const month = document.getElementById('billMonth');
+  const year = document.getElementById('billYear');
+  month.innerHTML = '';
+  for (let item = 1; item <= 12; item++) {
+    const opt = document.createElement('option');
+    opt.value = item;
+    opt.textContent = monthLabel(item);
+    month.appendChild(opt);
+  }
+  month.value = period.month;
+  const values = new Set([period.year, new Date().getFullYear(), ...years]);
+  sheetAllBills.forEach(bill => { if (bill.bill_date) values.add(Number(bill.bill_date.slice(0, 4))); });
+  year.innerHTML = '';
+  [...values].sort((a, b) => b - a).forEach(value => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = value;
+    year.appendChild(opt);
+  });
+  year.value = period.year;
+}
+function showMonthBills() {
+  const period = billPeriod();
+  activePeriod = period;
+  sheetBills = sheetAllBills.filter(bill => billInPeriod(bill, period));
+  if (!sheetBills.length) {
+    const blank = blankBill();
+    sheetAllBills.push(blank);
+    sheetBills = [blank];
+  }
+  renderBills();
+}
+function changeBillPeriod() {
+  const next = billPeriod();
+  if (dirty && !confirm(t('unsaved'))) {
+    document.getElementById('billYear').value = activePeriod.year;
+    document.getElementById('billMonth').value = activePeriod.month;
+    return;
+  }
+  if (dirty) {
+    sheetAllBills = savedBills.map(bill => ({ ...bill }));
+    dirty = false;
+  }
+  activePeriod = next;
+  showMonthBills();
+}
+function updateSheetChrome() {
+  const title = sheetId
+    ? (document.getElementById('sLast').value + ' ' + document.getElementById('sFirst').value).trim()
+    : t('newStudent');
+  document.getElementById('sheetTitle').textContent = title || t('newStudent');
+  document.getElementById('btnSave').textContent = t('save');
+  document.getElementById('btnDeleteStudent').classList.toggle('hidden', !sheetId || !isAdmin());
+  document.getElementById('btnSheetReport').classList.toggle('hidden', !sheetId);
+  const locked = sheetId && !isAdmin();
+  ['sLast', 'sFirst', 'sParent', 'sYear', 'sSection', 'sEmbg', 'sAccount', 'sNotes'].forEach(id => {
+    document.getElementById(id).disabled = locked;
+  });
+}
+function amountDecimals(value) {
+  const text = String(value || '');
+  if (!text) return null;
+  const comma = text.lastIndexOf(',');
+  if (comma === -1) return null;
+  const frac = text.slice(comma + 1).replace(/\D/g, '').slice(0, 2);
+  return frac === '00' ? '' : frac;
+}
+function renderBills() {
+  const admin = isAdmin() || !sheetId;
+  document.getElementById('billRows').innerHTML = sheetBills.map((bill, index) => {
+    const locked = !admin && bill.id;
+    return `<div class="bill-row">
+      <span>${index + 1}</span>
+      <div class="date-wrap">
+        <input ${locked ? 'disabled' : ''} maxlength="10" placeholder="${esc(t('datePh'))}" value="${esc(fmtDate(bill.bill_date))}" oninput="onBillDate(this, ${index})">
+        ${locked ? '' : `<button type="button" class="cal-btn" onclick="openBillCalendar(event, ${index})">▦</button>`}
+      </div>
+      <input class="amount-input" ${locked ? 'disabled' : ''} inputmode="decimal" placeholder="0,00" value="${esc(bill.amount)}" ${amountDecimals(bill.amount) == null ? '' : `data-decimals="${amountDecimals(bill.amount)}"`} onkeydown="onAmountKey(event, ${index})" oninput="formatMoneyInput(this, ${index})">
+      <input ${locked ? 'disabled' : ''} value="${esc(bill.note || '')}" oninput="setBill(${index}, 'note', this.value)">
+      ${locked ? '<span></span>' : `<button class="icon-btn" onclick="removeBill(${index})" title="${esc(t('delete'))}">×</button>`}
+    </div>`;
+  }).join('');
+  updateSheetTotal();
+}
+function onBillDate(el, index) {
+  let digits = el.value.replace(/\D/g, '').slice(0, 8);
+  let shown = digits;
+  if (digits.length > 4) shown = digits.slice(0, 2) + '.' + digits.slice(2, 4) + '.' + digits.slice(4);
+  else if (digits.length > 2) shown = digits.slice(0, 2) + '.' + digits.slice(2);
+  el.value = shown;
+  const period = billPeriod();
+  const match = shown.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!match) {
+    sheetBills[index].bill_date = '';
+    dirty = true;
+    return;
+  }
+  const iso = match[3] + '-' + match[2] + '-' + match[1];
+  const day = new Date(iso + 'T12:00:00');
+  const real = !Number.isNaN(day.getTime()) && day.getDate() === Number(match[1]) && day.getMonth() + 1 === Number(match[2]);
+  if (!real) { showError('sheetError', errText('bad_date')); el.value = ''; return; }
+  if (Number(match[3]) !== period.year || Number(match[2]) !== period.month) {
+    showError('sheetError', errText('bill_outside_month'));
+    el.value = '';
+    sheetBills[index].bill_date = '';
+    return;
+  }
+  showError('sheetError', '');
+  setBill(index, 'bill_date', iso);
+}
+function openBillCalendar(event, index) {
+  event.preventDefault();
+  event.stopPropagation();
+  const period = billPeriod();
+  const current = sheetBills[index].bill_date;
+  calState = {
+    index,
+    year: period.year,
+    month: period.month - 1,
+    locked: true,
+    selected: current && current.slice(0, 7) === period.year + '-' + String(period.month).padStart(2, '0') ? current : ''
+  };
+  renderCalendar();
+  const popup = document.getElementById('appCalendar');
+  popup.classList.remove('hidden');
+  positionCalendar(event.currentTarget);
+}
+function positionCalendar(anchor) {
+  const popup = document.getElementById('appCalendar');
+  const rect = anchor.getBoundingClientRect();
+  const width = popup.offsetWidth || 280;
+  const height = popup.offsetHeight || 320;
+  let left = Math.min(rect.left, window.innerWidth - width - 8);
+  left = Math.max(8, left);
+  let top = rect.bottom + 6;
+  if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+function renderCalendar() {
+  if (!calState) return;
+  const months = MONTHS[lang] || MONTHS.mk;
+  const days = CAL_DAYS[lang] || CAL_DAYS.mk;
+  document.getElementById('calTitle').textContent = months[calState.month + 1] + ' ' + calState.year;
+  document.getElementById('calWeek').innerHTML = days.map(day => `<span>${day}</span>`).join('');
+  document.getElementById('calClear').textContent = t('clearDate');
+  document.getElementById('calPrev').classList.toggle('hidden', calState.locked);
+  document.getElementById('calNext').classList.toggle('hidden', calState.locked);
+  const first = new Date(calState.year, calState.month, 1);
+  const start = (first.getDay() + 6) % 7;
+  const today = new Date();
+  const todayIso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  let html = '';
+  for (let i = 0; i < 42; i++) {
+    const day = new Date(calState.year, calState.month, 1 - start + i);
+    const iso = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
+    const outside = day.getMonth() !== calState.month;
+    const classes = ['app-cal-day'];
+    if (outside) classes.push('muted');
+    if (iso === todayIso) classes.push('today');
+    if (iso === calState.selected) classes.push('selected');
+    html += `<button type="button" class="${classes.join(' ')}" ${outside ? 'disabled' : `data-iso="${iso}"`}>${day.getDate()}</button>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+function shiftCalendar(step) {
+  if (!calState || calState.locked) return;
+  const next = new Date(calState.year, calState.month + step, 1);
+  calState.year = next.getFullYear();
+  calState.month = next.getMonth();
+  renderCalendar();
+}
+function pickCalendar(iso) {
+  if (!calState) return;
+  setBill(calState.index, 'bill_date', iso);
+  showError('sheetError', '');
+  closeCalendar();
+  renderBills();
+}
+function clearBillDate() {
+  if (!calState) return;
+  setBill(calState.index, 'bill_date', '');
+  closeCalendar();
+  renderBills();
+}
+function closeCalendar() {
+  document.getElementById('appCalendar').classList.add('hidden');
+  calState = null;
+}
+function syncAmount(el, index) {
+  if (!sheetBills[index]) return;
+  setBill(index, 'amount', el.value);
+}
+function placeAmountCaret(el) {
+  if (document.activeElement !== el) return;
+  if (el.dataset.decimals == null) {
+    const commaAt = el.value.lastIndexOf(',');
+    el.setSelectionRange(commaAt, commaAt);
+    return;
+  }
+  const pos = el.value.lastIndexOf(',') + 1 + el.dataset.decimals.length;
+  el.setSelectionRange(pos, pos);
+}
+function formatMoneyInput(el, index) {
+  const decimalMode = el.dataset.decimals != null;
+  const commaAt = el.value.lastIndexOf(',');
+  let intDigits = (commaAt === -1 ? el.value : el.value.slice(0, commaAt)).replace(/\D/g, '');
+  intDigits = intDigits.replace(/^0+(?=\d)/, '');
+  if (!intDigits && !decimalMode) {
+    el.value = '';
+    delete el.dataset.decimals;
+    syncAmount(el, index);
+    return;
+  }
+  const whole = (intDigits || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const typed = decimalMode ? el.dataset.decimals : '';
+  const frac = (decimalMode ? typed : '00').padEnd(2, '0').slice(0, 2);
+  el.value = whole + ',' + frac;
+  syncAmount(el, index);
+  placeAmountCaret(el);
+}
+function onAmountKey(event, index) {
+  const el = event.target;
+  if (event.key === ',' || event.key === '.') {
+    event.preventDefault();
+    if (el.dataset.decimals == null) {
+      const commaAt = el.value.lastIndexOf(',');
+      const existing = commaAt === -1 ? '' : el.value.slice(commaAt + 1).replace(/\D/g, '').slice(0, 2);
+      el.dataset.decimals = existing === '00' ? '' : existing;
+    }
+    formatMoneyInput(el, index);
+    return;
+  }
+  if (event.key >= '0' && event.key <= '9') {
+    const commaAt = el.value.lastIndexOf(',');
+    if (el.dataset.decimals == null && commaAt !== -1 && el.selectionStart > commaAt) {
+      const existing = el.value.slice(commaAt + 1).replace(/\D/g, '').slice(0, 2);
+      el.dataset.decimals = existing === '00' ? '' : existing;
+    }
+    if (el.dataset.decimals == null) return;
+    event.preventDefault();
+    if (el.dataset.decimals.length < 2) el.dataset.decimals += event.key;
+    formatMoneyInput(el, index);
+    return;
+  }
+  if (event.key === 'Backspace') {
+    const commaAt = el.value.lastIndexOf(',');
+    if (commaAt !== -1 && el.selectionStart > commaAt) {
+      event.preventDefault();
+      el.dataset.decimals = (el.dataset.decimals || '').slice(0, -1);
+      formatMoneyInput(el, index);
+    }
+  }
+}
+function setBill(index, key, value) {
+  sheetBills[index][key] = value;
+  dirty = true;
+  if (key === 'amount') updateSheetTotal();
+}
+function blurAmount(el, index) {
+  const n = parseAmount(el.value);
+  if (n != null && n > 0) {
+    el.value = fmtMoney(n);
+    sheetBills[index].amount = el.value;
+  }
+}
+function updateSheetTotal() {
+  const total = sheetBills.reduce((sum, bill) => sum + (parseAmount(bill.amount) || 0), 0);
+  document.getElementById('sheetTotal').textContent = fmtMoney(total);
+}
+function addBillRow() {
+  sheetAllBills.push(blankBill());
+  dirty = true;
+  showMonthBills();
+}
+function removeBill(index) {
+  const bill = sheetBills[index];
+  sheetAllBills = sheetAllBills.filter(item => item !== bill);
+  dirty = true;
+  showMonthBills();
+}
+async function openSheet(id) {
+  if (!guardDirty()) return;
+  showError('sheetError', '');
+  sheetId = id;
+  if (!id) {
+    sheetAllBills = [];
+    ['sLast', 'sFirst', 'sParent', 'sEmbg', 'sAccount', 'sNotes'].forEach(field => { document.getElementById(field).value = ''; });
+    setClass('');
+    document.getElementById('embgCount').textContent = '0/13';
+    document.getElementById('accountCount').textContent = '0/15';
+    document.getElementById('bankName').textContent = '';
+    document.getElementById('embgHint').textContent = t('embgHelp');
+    document.getElementById('embgHint').classList.remove('warn');
+  } else {
+    const res = await fetch('/api/students/' + id);
+    if (!res.ok) { toast(await readError(res)); return; }
+    const student = await res.json();
+    document.getElementById('sLast').value = student.last_name;
+    document.getElementById('sFirst').value = student.first_name;
+    document.getElementById('sParent').value = student.parent_name;
+    setClass(student.class_name);
+    document.getElementById('sEmbg').value = student.parent_embg || '';
+    document.getElementById('sAccount').value = student.bank_account || '';
+    document.getElementById('sNotes').value = student.notes || '';
+    document.getElementById('embgCount').textContent = (student.parent_embg || '').length + '/13';
+    document.getElementById('accountCount').textContent = (student.bank_account || '').length + '/15';
+    document.getElementById('bankName').textContent = student.bank_name || bankName(student.bank_account);
+    sheetAllBills = student.bills.map(bill => ({
+      id: bill.id, bill_date: bill.bill_date, amount: fmtMoney(bill.amount), note: bill.note || ''
+    }));
+    const hint = document.getElementById('embgHint');
+    hint.textContent = student.embg_warning ? t('embgWarn') : t('embgHelp');
+    hint.classList.toggle('warn', student.embg_warning);
+  }
+  fillBillPeriod();
+  savedBills = sheetAllBills.map(bill => ({ ...bill }));
+  dirty = false;
+  updateSheetChrome();
+  showMonthBills();
+  setNav('sheet');
+}
+function readIdentity() {
+  const embg = document.getElementById('sEmbg').value;
+  const account = document.getElementById('sAccount').value;
+  if (embg && embg.length !== 13) return showError('sheetError', errText('embg_length'));
+  if (account && account.length !== 15) return showError('sheetError', errText('account_length'));
+  const className = classValue();
+  if (className == null) return;
+  showError('sheetError', '');
+  return {
+    last_name: document.getElementById('sLast').value.trim(),
+    first_name: document.getElementById('sFirst').value.trim(),
+    parent_name: document.getElementById('sParent').value.trim(),
+    class_name: className,
+    parent_embg: embg,
+    bank_account: account,
+    notes: document.getElementById('sNotes').value.trim()
+  };
+}
+function collectBills() {
+  const period = billPeriod();
+  const rows = [];
+  for (const bill of sheetBills) {
+    if (!bill.amount && !bill.note) continue;
+    if (!bill.bill_date) return showError('sheetError', errText('date_required'));
+    if (!billInPeriod(bill, period)) return showError('sheetError', errText('bill_outside_month'));
+    rows.push({ id: bill.id || null, bill_date: bill.bill_date, amount: bill.amount, note: bill.note });
+  }
+  showError('sheetError', '');
+  return rows;
+}
+async function saveSheet() {
+  const identity = readIdentity();
+  if (!identity) return;
+  const bills = collectBills();
+  if (!bills) return;
+  const period = billPeriod();
+  let url = '/api/students';
+  let method = 'POST';
+  let body = { ...identity, bills, bill_year: period.year, bill_month: period.month };
+  if (sheetId && isAdmin()) {
+    url = '/api/students/' + sheetId;
+    method = 'PUT';
+  } else if (sheetId) {
+    const fresh = bills.filter(bill => !bill.id);
+    if (!fresh.length) { toast(t('nothingNew')); return; }
+    url = '/api/students/' + sheetId + '/bills';
+    body = { bills: fresh };
+  }
+  const res = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  if (!res.ok) { showError('sheetError', await readError(res)); return; }
+  const saved = await res.json();
+  if (identity.class_name && !saved.class_name) {
+    showError('sheetError', lang === 'en'
+      ? 'The class was not saved. Close the app window and start it again with start.bat.'
+      : 'Класот не е зачуван. Затворете го прозорецот и пуштете го start.bat повторно.');
+    return;
+  }
+  dirty = false;
+  toast(t('saved'));
+  await openSheet(saved.id);
+  dirty = false;
+}
+async function deleteStudent() {
+  if (!sheetId || !confirm(t('confirmDelete'))) return;
+  const res = await fetch('/api/students/' + sheetId, { method: 'DELETE' });
+  if (!res.ok) { showError('sheetError', await readError(res)); return; }
+  dirty = false;
+  goStudents();
+}
+function reportThisStudent() {
+  if (!sheetId || !guardDirty()) return;
+  document.getElementById('reportStudent').value = sheetId;
+  setNav('reports');
+  setReportType('student');
+}
+
+function setReportType(next) {
+  reportType = next;
+  document.querySelectorAll('#reportTypes .view-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === next);
+  });
+  const needsMonth = next !== 'year' && next !== 'student';
+  const needsStudent = next === 'student' || next === 'student-month';
+  document.getElementById('monthFilter').classList.toggle('hidden', !needsMonth);
+  document.getElementById('studentFilter').classList.toggle('hidden', !needsStudent);
+  loadReport();
+}
+function reportParams() {
+  const params = new URLSearchParams();
+  params.set('year', document.getElementById('reportYear').value || String(new Date().getFullYear()));
+  params.set('month', document.getElementById('reportMonth').value || String(new Date().getMonth() + 1));
+  const student = document.getElementById('reportStudent').value;
+  if (student) params.set('student_id', student);
+  return params;
+}
+async function loadReport() {
+  await loadYears();
+  if (!reportStudents.length) {
+    const res = await fetch('/api/students');
+    reportStudents = res.ok ? await res.json() : [];
+    fillStudentSelect();
+  }
+  const needsStudent = reportType === 'student' || reportType === 'student-month';
+  if (needsStudent && !document.getElementById('reportStudent').value) {
+    reportData = null;
+    document.getElementById('reportSheet').innerHTML = '<div class="empty">' + esc(t('pickStudent')) + '</div>';
+    return;
+  }
+  const path = {
+    month: '/api/reports/month',
+    'month-bills': '/api/reports/month/bills',
+    'student-month': '/api/reports/student-month',
+    student: '/api/reports/student',
+    year: '/api/reports/year'
+  }[reportType];
+  const res = await fetch(path + '?' + reportParams());
+  if (!res.ok) { document.getElementById('reportSheet').innerHTML = '<div class="empty">' + esc(await readError(res)) + '</div>'; return; }
+  reportData = await res.json();
+  renderReport();
+}
+function paymentBanner(payment) {
+  if (!payment) return '';
+  const when = fmtDate(payment.paid_at) + ' ' + (payment.paid_at || '').slice(11, 16);
+  const cls = payment.stale ? 'warn' : 'ok';
+  const extra = payment.stale ? ' ' + esc(t('stale')) : '';
+  return `<div class="banner ${cls}">${esc(t('paidOn'))} ${esc(when)} ${esc(t('paidBy'))} ${esc(payment.paid_by)}. ${fmtMoney(payment.amount_at_payment)} ден.${extra}</div>`;
+}
+function payButtons(payment, totals) {
+  if (!isAdmin() || reportType !== 'month') return '';
+  if (!totals || !totals.bill_count) return '';
+  const mark = payment ? t(payment.stale ? 'remarkPaid' : 'unmarkPaid') : t('markPaid');
+  const paid = !payment || payment.stale;
+  return `<div class="no-print" style="margin-bottom:12px"><button class="btn ${paid ? 'btn-primary' : 'btn-secondary'}" onclick="markPaid(${paid})">${esc(mark)}</button></div>`;
+}
+function printHead(title) {
+  return `<div class="print-head"><div class="print-school">${esc(SCHOOL)}</div><div class="sheet-title">${esc(title)}</div></div>`;
+}
+function identityBlock(student) {
+  return `<div class="identity">
+    <div><b>${esc(t('lastName'))}</b>${esc(student.last_name)}</div>
+    <div><b>${esc(t('firstName'))}</b>${esc(student.first_name)}</div>
+    <div><b>${esc(t('className'))}</b>${esc(student.class_name || '')}</div>
+    <div><b>${esc(t('parent'))}</b>${esc(student.parent_name)}</div>
+    <div><b>${esc(t('embg'))}</b><span class="digits">${esc(student.parent_embg || '')}</span></div>
+    <div><b>${esc(t('account'))}</b><span class="digits">${esc(student.bank_account || '')}</span>${student.bank_name ? `<div class="hint">${esc(student.bank_name)}</div>` : ''}</div>
+  </div>`;
+}
+function billTable(bills, total) {
+  if (!bills.length) return '<div class="empty">' + esc(t('noBills')) + '</div>';
+  const rows = bills.map((bill, index) => `<tr>
+    <td>${index + 1}</td><td>${esc(fmtDate(bill.bill_date))}</td>
+    <td class="money">${fmtMoney(bill.amount)}</td><td>${esc(bill.note || '')}</td></tr>`).join('');
+  return `<table><thead><tr><th>#</th><th>${esc(t('date'))}</th><th>${esc(t('amountDen'))}</th><th>${esc(t('note'))}</th></tr></thead>
+    <tbody>${rows}<tr class="total-row"><td></td><td>${esc(t('total'))}</td><td class="money">${fmtMoney(total)}</td><td></td></tr></tbody></table>`;
+}
+function renderReport() {
+  const data = reportData;
+  const el = document.getElementById('reportSheet');
+  if (!data) return;
+  if (reportType === 'month') {
+    const title = t('repMonth') + ' — ' + monthLabel(data.month) + ' ' + data.year;
+    const rows = data.rows.map((row, index) => `<tr>
+      <td>${index + 1}</td>
+      <td><button class="linkish" onclick="openStudentMonth(${row.id})">${esc(row.last_name)} ${esc(row.first_name)}</button></td>
+      <td>${esc(row.class_name || '')}</td>
+      <td>${esc(row.parent_name)}</td><td class="digits">${esc(row.parent_embg)}</td>
+      <td class="digits">${esc(row.bank_account || '')}${row.bank_name ? `<div class="hint">${esc(row.bank_name)}</div>` : ''}</td><td class="money">${row.bill_count}</td>
+      <td class="money">${fmtMoney(row.total)}</td></tr>`).join('');
+    el.innerHTML = printHead(title) + paymentBanner(data.payment) + payButtons(data.payment, data.totals) +
+      (data.rows.length ? `<div class="table-wrap"><table><thead><tr>
+        <th>#</th><th>${esc(t('student'))}</th><th>${esc(t('className'))}</th><th>${esc(t('parent'))}</th><th>${esc(t('embg'))}</th>
+        <th>${esc(t('account'))}</th><th>${esc(t('bills'))}</th><th>${esc(t('amountDen'))}</th>
+      </tr></thead><tbody>${rows}<tr class="total-row"><td></td><td>${esc(t('total'))}</td><td></td><td></td><td></td><td></td>
+        <td class="money">${data.totals.bill_count}</td><td class="money">${fmtMoney(data.totals.total)}</td></tr></tbody></table></div>`
+        : '<div class="empty">' + esc(t('noBills')) + '</div>');
+  } else if (reportType === 'month-bills') {
+    const title = t('repBills') + ' — ' + monthLabel(data.month) + ' ' + data.year;
+    const groups = data.groups.map(group => `<div class="group-card"><div class="group-head"><div><strong>${esc(group.last_name)} ${esc(group.first_name)}</strong><div class="hint">${esc(group.parent_name)} · <span class="digits">${esc(group.parent_embg)}</span></div></div><strong>${fmtMoney(group.total)} ден.</strong></div>${billTable(group.bills, group.total)}</div>`).join('');
+    el.innerHTML = printHead(title) + paymentBanner(data.payment) + (groups || '<div class="empty">' + esc(t('noBills')) + '</div>') +
+      `<div class="bill-total"><span>${esc(t('total'))}</span><span></span><strong>${fmtMoney(data.totals.total)}</strong><span>ден.</span><span></span></div>`;
+  } else if (reportType === 'student-month') {
+    const title = data.student.last_name + ' ' + data.student.first_name + ' — ' + monthLabel(data.month) + ' ' + data.year;
+    el.innerHTML = printHead(title) + identityBlock(data.student) + paymentBanner(data.payment) + billTable(data.bills, data.total);
+  } else if (reportType === 'student') {
+    const title = data.student.last_name + ' ' + data.student.first_name + (data.year ? ' — ' + data.year : '');
+    const months = data.months.map(month => `<div class="group-card"><div class="group-head"><strong>${esc(monthLabel(month.month))} ${month.year}</strong><span>${month.payment ? '<span class="paid-mark">✓ ' + esc(t('paidOn')) + '</span>' : ''} ${fmtMoney(month.total)} ден.</span></div>${billTable(month.bills, month.total)}</div>`).join('');
+    el.innerHTML = printHead(title) + identityBlock(data.student) + (months || '<div class="empty">' + esc(t('noBills')) + '</div>') +
+      `<div class="bill-total"><span>${esc(t('total'))}</span><span></span><strong>${fmtMoney(data.total)}</strong><span>ден.</span><span></span></div>`;
+  } else {
+    const title = t('yearTitle') + ' ' + data.year;
+    const head = data.months.map(month => `<th>${esc(month.month_name.slice(0, 3))}${month.payment ? ' ✓' : ''}</th>`).join('');
+    const rows = data.students.map(student => `<tr>
+      <td><button class="linkish" onclick="openYearStudent(${student.id})">${esc(student.last_name)} ${esc(student.first_name)}</button></td>
+      <td>${esc(student.class_name || '')}</td>
+      <td>${esc(student.parent_name)}</td>
+      ${student.months.map(amount => `<td class="money">${amount ? fmtMoney(amount) : ''}</td>`).join('')}
+      <td class="money">${fmtMoney(student.total)}</td></tr>`).join('');
+    const foot = data.months.map(month => `<td class="money">${month.total ? fmtMoney(month.total) : ''}</td>`).join('');
+    el.innerHTML = printHead(title) + `<div class="table-wrap"><table><thead><tr><th>${esc(t('student'))}</th><th>${esc(t('className'))}</th><th>${esc(t('parent'))}</th>${head}<th>${esc(t('total'))}</th></tr></thead>
+      <tbody>${rows}<tr class="total-row"><td>${esc(t('total'))}</td><td></td><td></td>${foot}<td class="money">${fmtMoney(data.total)}</td></tr></tbody></table></div>`;
+  }
+}
+function openStudentMonth(id) {
+  document.getElementById('reportStudent').value = id;
+  setReportType('student-month');
+}
+function openYearStudent(id) {
+  document.getElementById('reportStudent').value = id;
+  setReportType('student');
+}
+async function markPaid(paid) {
+  if (!confirm(paid ? t('confirmPay') : t('confirmUnpay'))) return;
+  const res = await fetch('/api/reports/month-payment', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      year: Number(document.getElementById('reportYear').value),
+      month: Number(document.getElementById('reportMonth').value),
+      paid
+    })
+  });
+  if (!res.ok) { toast(await readError(res)); return; }
+  toast(t('saved'));
+  loadReport();
+}
+async function exportReport() {
+  const params = reportParams();
+  params.set('type', reportType);
+  const res = await fetch('/api/reports/export?' + params);
+  if (!res.ok) { toast(await readError(res)); return; }
+  const blob = await res.blob();
+  const link = document.createElement('a');
+  const match = (res.headers.get('Content-Disposition') || '').match(/filename=([^;]+)/);
+  link.href = URL.createObjectURL(blob);
+  link.download = match ? match[1] : 'povrat.xlsx';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function openUsers() {
+  document.getElementById('usersOverlay').classList.remove('hidden');
+  showError('userError', '');
+  const res = await fetch('/api/users');
+  if (!res.ok) { showError('userError', await readError(res)); return; }
+  const users = await res.json();
+  document.getElementById('usersTable').innerHTML = `<table><thead><tr><th>${esc(t('user'))}</th><th>${esc(t('role'))}</th><th></th></tr></thead><tbody>` +
+    users.map(user => `<tr><td>${esc(user.username)}</td><td>${esc(user.role === 'admin' ? t('roleAdmin') : t('roleUser'))}</td><td>${user.id === currentUser.id ? '' : `<button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id})">${esc(t('delete'))}</button>`}</td></tr>`).join('') +
+    '</tbody></table>';
+}
+function closeUsers() { document.getElementById('usersOverlay').classList.add('hidden'); }
+async function createUser() {
+  const res = await fetch('/api/users', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: document.getElementById('newUsername').value.trim(),
+      password: document.getElementById('newPassword').value,
+      role: document.getElementById('newRole').value
+    })
+  });
+  if (!res.ok) { showError('userError', await readError(res)); return; }
+  document.getElementById('newUsername').value = '';
+  document.getElementById('newPassword').value = '';
+  openUsers();
+}
+async function deleteUser(id) {
+  const res = await fetch('/api/users/' + id, { method: 'DELETE' });
+  if (!res.ok) { showError('userError', await readError(res)); return; }
+  openUsers();
+}
+function openPassword() {
+  showError('passwordError', '');
+  document.getElementById('passwordOverlay').classList.remove('hidden');
+}
+function closePassword() { document.getElementById('passwordOverlay').classList.add('hidden'); }
+async function savePassword() {
+  const res = await fetch('/api/me/password', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      current_password: document.getElementById('currentPassword').value,
+      password: document.getElementById('newPasswordOwn').value
+    })
+  });
+  if (!res.ok) { showError('passwordError', await readError(res)); return; }
+  document.getElementById('currentPassword').value = '';
+  document.getElementById('newPasswordOwn').value = '';
+  closePassword();
+  toast(t('saved'));
+}
+
+document.getElementById('calGrid').addEventListener('click', event => {
+  const btn = event.target.closest('[data-iso]');
+  if (btn) pickCalendar(btn.dataset.iso);
+});
+document.addEventListener('click', event => {
+  if (!calState) return;
+  if (event.target.closest('#appCalendar') || event.target.closest('.cal-btn')) return;
+  closeCalendar();
+});
+window.addEventListener('beforeunload', event => { if (dirty) event.preventDefault(); });
+applyTheme();
+applyLang();
+checkAuth();
+</script>
+</body>
+</html>
