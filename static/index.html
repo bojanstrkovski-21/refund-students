@@ -1025,7 +1025,7 @@ function renderBills() {
         <input ${locked ? 'disabled' : ''} maxlength="10" placeholder="${esc(t('datePh'))}" value="${esc(fmtDate(bill.bill_date))}" oninput="onBillDate(this, ${index})">
         ${locked ? '' : `<button type="button" class="cal-btn" onclick="openBillCalendar(event, ${index})">▦</button>`}
       </div>
-      <input class="amount-input" ${locked ? 'disabled' : ''} inputmode="decimal" placeholder="0,00" value="${esc(bill.amount)}" ${amountDecimals(bill.amount) == null ? '' : `data-decimals="${amountDecimals(bill.amount)}"`} onkeydown="onAmountKey(event, ${index})" oninput="formatMoneyInput(this, ${index})">
+      <input class="amount-input" data-bill="${index}" ${locked ? 'disabled' : ''} inputmode="decimal" placeholder="0,00" value="${esc(bill.amount)}" ${amountDecimals(bill.amount) == null ? '' : `data-decimals="${amountDecimals(bill.amount)}"`} onkeydown="onAmountKey(event, ${index})" oninput="formatMoneyInput(this, ${index})">
       <input ${locked ? 'disabled' : ''} value="${esc(bill.note || '')}" oninput="setBill(${index}, 'note', this.value)">
       ${locked ? '<span></span>' : `<button class="icon-btn" onclick="removeBill(${index})" title="${esc(t('delete'))}">×</button>`}
     </div>`;
@@ -1057,6 +1057,15 @@ function onBillDate(el, index) {
   }
   showError('sheetError', '');
   setBill(index, 'bill_date', iso);
+  focusAmount(index);
+}
+function focusAmount(index) {
+  const field = document.querySelector('.amount-input[data-bill="' + index + '"]');
+  if (!field || field.disabled) return;
+  field.focus();
+  const commaAt = field.value.lastIndexOf(',');
+  const pos = commaAt === -1 ? field.value.length : commaAt;
+  field.setSelectionRange(pos, pos);
 }
 function openBillCalendar(event, index) {
   event.preventDefault();
@@ -1122,10 +1131,12 @@ function shiftCalendar(step) {
 }
 function pickCalendar(iso) {
   if (!calState) return;
-  setBill(calState.index, 'bill_date', iso);
+  const index = calState.index;
+  setBill(index, 'bill_date', iso);
   showError('sheetError', '');
   closeCalendar();
   renderBills();
+  focusAmount(index);
 }
 function clearBillDate() {
   if (!calState) return;
@@ -1222,6 +1233,11 @@ function addBillRow() {
   sheetAllBills.push(blankBill());
   dirty = true;
   showMonthBills();
+  const index = sheetBills.length - 1;
+  const row = document.getElementById('billRows').children[index];
+  const button = row ? row.querySelector('.cal-btn') : null;
+  if (!button) return;
+  setTimeout(() => openBillCalendar({ preventDefault() {}, stopPropagation() {}, currentTarget: button }, index), 0);
 }
 function removeBill(index) {
   const bill = sheetBills[index];
