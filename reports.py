@@ -1,7 +1,7 @@
 import io
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, jsonify, make_response, request, session
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -349,11 +349,10 @@ def style_header(ws, row, columns):
 def workbook_response(wb, filename):
     buf = io.BytesIO()
     wb.save(buf)
-    return current_app.response_class(
-        buf.getvalue(),
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={'Content-Disposition': f'attachment; filename={filename}'}
-    )
+    response = make_response(buf.getvalue())
+    response.mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 
 def title_block(ws, title, columns):
@@ -370,6 +369,8 @@ def export_report():
     db = get_db()
     wb = Workbook()
     ws = wb.active
+    if ws is None:
+        ws = wb.create_sheet('Извештај')
     if kind == 'month':
         year, month, error = period(request.args)
         if error:
@@ -411,7 +412,7 @@ def export_report():
         if error:
             return jsonify({'error': error, 'code': error}), 400
         ws.title = 'Сметки'
-        headers = ['Презиме', 'Име', 'Родител', 'Датум', 'Износ', 'Забелешка']
+        headers = ['Презиме', 'Име', 'Родител', 'Датум', 'Износ', 'Статус', 'Забелешка']
         title_block(ws, f'Сметки за {month_name(month)} {year}', len(headers))
         for index, header in enumerate(headers, 1):
             ws.cell(4, index, header)
@@ -423,12 +424,13 @@ def export_report():
             ws.cell(line, 3, bill['parent_name'])
             ws.cell(line, 4, '.'.join(reversed(bill['bill_date'].split('-'))))
             money_cell(ws.cell(line, 5), bill['amount'])
-            ws.cell(line, 6, bill['note'] or '')
+            ws.cell(line, 6, 'платена' if bill.get('paid') else 'неплатена')
+            ws.cell(line, 7, bill['note'] or '')
             line += 1
         current = totals(db, year, month)
         ws.cell(line, 3, 'ВКУПНО').font = Font(bold=True)
         money_cell(ws.cell(line, 5), current['total'], bold=True)
-        widths = [18, 16, 24, 14, 14, 28]
+        widths = [18, 16, 24, 14, 14, 14, 28]
         filename = f'povrat-smetki-{year}-{month:02d}.xlsx'
     elif kind == 'student-month':
         year, month, error = period(request.args)
@@ -441,7 +443,7 @@ def export_report():
         if not student:
             return jsonify({'error': 'not_found', 'code': 'not_found'}), 404
         ws.title = 'Ученик'
-        headers = ['#', 'Датум', 'Износ', 'Забелешка']
+        headers = ['#', 'Датум', 'Износ', 'Статус', 'Забелешка']
         title_block(ws, f'{student["last_name"]} {student["first_name"]} — {month_name(month)} {year}', len(headers))
         ws.cell(3, 1, f'Родител: {student["parent_name"]}')
         embg = ws.cell(3, 3, student['parent_embg'])
@@ -458,12 +460,13 @@ def export_report():
             ws.cell(line, 1, index)
             ws.cell(line, 2, '.'.join(reversed(bill['bill_date'].split('-'))))
             money_cell(ws.cell(line, 3), bill['amount'])
-            ws.cell(line, 4, bill['note'] or '')
+            ws.cell(line, 4, 'платена' if bill.get('paid') else 'неплатена')
+            ws.cell(line, 5, bill['note'] or '')
         total_row = 6 + len(bills)
         ws.cell(total_row, 2, 'ВКУПНО').font = Font(bold=True)
         money_cell(ws.cell(total_row, 3), sum(bill['amount'] for bill in bills), bold=True)
         ws.cell(total_row, 3).fill = TOTAL_FILL
-        widths = [6, 14, 14, 28]
+        widths = [6, 14, 14, 14, 28]
         filename = f'povrat-ucenik-{year}-{month:02d}.xlsx'
     elif kind == 'student':
         student_id = clean(request.args.get('student_id'))
@@ -559,8 +562,10 @@ def export_report():
     ws.page_setup.fitToPage = True
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.oddHeader.left.text = SCHOOL_NAME
+    page_setup = ws.sheet_properties.pageSetUpPr
+    if page_setup is not None:
+        page_setup.fitToPage = True
+    ws.oddHeader.left.text = SCHOOL_NAME  # type: ignore[union-attr]
     ws.print_title_rows = '1:4'
     ws.page_setup.paperSize = 9
     return workbook_response(wb, filename)

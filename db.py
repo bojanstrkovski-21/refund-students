@@ -56,6 +56,7 @@ def init_db():
                 note            TEXT,
                 year            INTEGER NOT NULL,
                 month           INTEGER NOT NULL,
+                paid            INTEGER NOT NULL DEFAULT 0,
                 created_at      TEXT DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -76,6 +77,7 @@ def init_db():
         ''')
         _relax_students(conn)
         _add_column(conn, 'students', 'class_name', 'TEXT')
+        _add_column(conn, 'bills', 'paid', 'INTEGER NOT NULL DEFAULT 0')
         count = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
         if count == 0:
             conn.execute(

@@ -157,7 +157,12 @@
       border: 1px solid var(--danger); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;
     }
     .bill-head, .bill-row, .bill-total {
-      display: grid; grid-template-columns: 36px 168px 150px 1fr 40px; gap: 8px; align-items: center;
+      display: grid; grid-template-columns: 36px 168px 140px 108px 1fr 40px; gap: 8px; align-items: center;
+    }
+    .bill-scroll { max-height: min(360px, calc(100vh - 430px)); overflow-y: auto; padding-right: 4px; }
+    .sheet-foot {
+      position: sticky; bottom: 0; background: var(--card); padding-top: 8px; z-index: 5;
+      border-top: 1px solid var(--border);
     }
     .bill-period { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 4px 0 12px; }
     .narrow-embg { width: 20ch; max-width: 100%; }
@@ -386,13 +391,15 @@
             <span>#</span>
             <span data-i18n="date">Датум</span>
             <span data-i18n="amount">Износ</span>
+            <span data-i18n="status">Статус</span>
             <span data-i18n="note">Забелешка</span>
             <span></span>
           </div>
-          <div id="billRows"></div>
+          <div class="bill-scroll" id="billRows"></div>
+          <div class="sheet-foot">
           <div class="bill-total">
             <span data-i18n="total">Вкупно</span>
-            <span></span>
+            <span></span><span></span>
             <strong id="sheetTotal">0,00</strong>
             <span>ден.</span>
             <span></span>
@@ -401,6 +408,7 @@
             <button class="btn btn-secondary" onclick="addBillRow()">＋ <span data-i18n="addBill">Додади сметка</span></button>
             <div class="toolbar-spacer"></div>
             <button class="btn btn-primary" id="btnSave" onclick="saveSheet()" data-i18n="save">Зачувај</button>
+          </div>
           </div>
         </div>
       </section>
@@ -516,7 +524,7 @@ const S = {
     embgHelp: 'Не е задолжително. 13 цифри, без празни места. За 1–9, нулата од напред останува.',
     embgWarn: 'Контролната цифра не се совпаѓа. Може да се зачува, проверете го бројот.',
     account: 'Трансакциска сметка', accountHelp: 'Не е задолжително. 15 цифри, без празни места. Нулите од напред остануваат.',
-    note: 'Забелешка', date: 'Датум', amount: 'Износ', total: 'Вкупно', addBill: 'Додади сметка',
+    note: 'Забелешка', date: 'Датум', amount: 'Износ', total: 'Вкупно', addBill: 'Додади сметка', status: 'Статус', paid: 'платена', unpaid: 'неплатена',
     save: 'Зачувај', month: 'Месец', student: 'Ученик', excel: 'Excel', print: 'Печати',
     repMonth: 'Месечен преглед', repBills: 'Сметки', repStudentMonth: 'Ученик / месец',
     repStudent: 'Ученик / родител', repYear: 'Година', pickReport: 'Изберете извештај.',
@@ -545,7 +553,7 @@ const S = {
     embgHelp: 'Optional. 13 digits, no spaces. Days 1–9 keep the leading zero.',
     embgWarn: 'The check digit does not match. You can still save it. Check the number.',
     account: 'Bank account', accountHelp: 'Optional. 15 digits, no spaces. Leading zeros are kept.',
-    note: 'Note', date: 'Date', amount: 'Amount', total: 'Total', addBill: 'Add bill',
+    note: 'Note', date: 'Date', amount: 'Amount', total: 'Total', addBill: 'Add bill', status: 'Status', paid: 'paid', unpaid: 'unpaid',
     save: 'Save', month: 'Month', student: 'Student', excel: 'Excel', print: 'Print',
     repMonth: 'Month summary', repBills: 'Bills', repStudentMonth: 'Student / month',
     repStudent: 'Student / parent', repYear: 'Year', pickReport: 'Choose a report.',
@@ -940,7 +948,7 @@ function digitsField(el, max, countId) {
 }
 function blankBill() {
   const period = billPeriod();
-  return { id: null, bill_date: '', amount: '', note: '', draftYear: period.year, draftMonth: period.month };
+  return { id: null, bill_date: '', amount: '', note: '', paid: 0, draftYear: period.year, draftMonth: period.month };
 }
 function billInPeriod(bill, period) {
   if (!bill.bill_date) return bill.draftYear === period.year && bill.draftMonth === period.month;
@@ -1025,7 +1033,8 @@ function renderBills() {
         <input ${locked ? 'disabled' : ''} maxlength="10" placeholder="${esc(t('datePh'))}" value="${esc(fmtDate(bill.bill_date))}" oninput="onBillDate(this, ${index})">
         ${locked ? '' : `<button type="button" class="cal-btn" onclick="openBillCalendar(event, ${index})">▦</button>`}
       </div>
-      <input class="amount-input" data-bill="${index}" ${locked ? 'disabled' : ''} inputmode="decimal" placeholder="0,00" value="${esc(bill.amount)}" ${amountDecimals(bill.amount) == null ? '' : `data-decimals="${amountDecimals(bill.amount)}"`} onkeydown="onAmountKey(event, ${index})" oninput="formatMoneyInput(this, ${index})">
+      <input class="amount-input" data-bill="${index}" ${locked ? 'disabled' : ''} inputmode="decimal" placeholder="0,00" value="${esc(bill.amount)}" onkeydown="onAmountKey(event, ${index})" oninput="formatMoneyInput(this, ${index})">
+      <button type="button" class="btn btn-sm ${bill.paid ? 'btn-primary' : 'btn-secondary'}" ${locked ? 'disabled' : ''} onclick="togglePaid(${index})">${esc(bill.paid ? t('paid') : t('unpaid'))}</button>
       <input ${locked ? 'disabled' : ''} value="${esc(bill.note || '')}" oninput="setBill(${index}, 'note', this.value)">
       ${locked ? '<span></span>' : `<button class="icon-btn" onclick="removeBill(${index})" title="${esc(t('delete'))}">×</button>`}
     </div>`;
@@ -1214,9 +1223,22 @@ function onAmountKey(event, index) {
   }
 }
 function setBill(index, key, value) {
-  sheetBills[index][key] = value;
+  const bill = sheetBills[index];
+  if (!bill) return;
+  const changed = key === 'amount' ? parseAmount(bill.amount) !== parseAmount(value) : bill[key] !== value;
+  bill[key] = value;
+  if ((key === 'amount' || key === 'bill_date') && changed && bill.paid) {
+    bill.paid = 0;
+    renderBills();
+    return;
+  }
   dirty = true;
   if (key === 'amount') updateSheetTotal();
+}
+function togglePaid(index) {
+  sheetBills[index].paid = sheetBills[index].paid ? 0 : 1;
+  dirty = true;
+  renderBills();
 }
 function blurAmount(el, index) {
   const n = parseAmount(el.value);
@@ -1273,7 +1295,7 @@ async function openSheet(id) {
     document.getElementById('accountCount').textContent = (student.bank_account || '').length + '/15';
     document.getElementById('bankName').textContent = student.bank_name || bankName(student.bank_account);
     sheetAllBills = student.bills.map(bill => ({
-      id: bill.id, bill_date: bill.bill_date, amount: fmtMoney(bill.amount), note: bill.note || ''
+      id: bill.id, bill_date: bill.bill_date, amount: fmtMoney(bill.amount), note: bill.note || '', paid: bill.paid ? 1 : 0
     }));
     const hint = document.getElementById('embgHint');
     hint.textContent = student.embg_warning ? t('embgWarn') : t('embgHelp');
@@ -1311,7 +1333,7 @@ function collectBills() {
     if (!bill.amount && !bill.note) continue;
     if (!bill.bill_date) return showError('sheetError', errText('date_required'));
     if (!billInPeriod(bill, period)) return showError('sheetError', errText('bill_outside_month'));
-    rows.push({ id: bill.id || null, bill_date: bill.bill_date, amount: bill.amount, note: bill.note });
+    rows.push({ id: bill.id || null, bill_date: bill.bill_date, amount: bill.amount, note: bill.note, paid: bill.paid ? 1 : 0 });
   }
   showError('sheetError', '');
   return rows;
@@ -1439,9 +1461,11 @@ function billTable(bills, total) {
   if (!bills.length) return '<div class="empty">' + esc(t('noBills')) + '</div>';
   const rows = bills.map((bill, index) => `<tr>
     <td>${index + 1}</td><td>${esc(fmtDate(bill.bill_date))}</td>
-    <td class="money">${fmtMoney(bill.amount)}</td><td>${esc(bill.note || '')}</td></tr>`).join('');
-  return `<table><thead><tr><th>#</th><th>${esc(t('date'))}</th><th>${esc(t('amountDen'))}</th><th>${esc(t('note'))}</th></tr></thead>
-    <tbody>${rows}<tr class="total-row"><td></td><td>${esc(t('total'))}</td><td class="money">${fmtMoney(total)}</td><td></td></tr></tbody></table>`;
+    <td class="money">${fmtMoney(bill.amount)}</td>
+    <td class="${bill.paid ? 'paid-mark' : ''}">${esc(bill.paid ? t('paid') : t('unpaid'))}</td>
+    <td>${esc(bill.note || '')}</td></tr>`).join('');
+  return `<table><thead><tr><th>#</th><th>${esc(t('date'))}</th><th>${esc(t('amountDen'))}</th><th>${esc(t('status'))}</th><th>${esc(t('note'))}</th></tr></thead>
+    <tbody>${rows}<tr class="total-row"><td></td><td>${esc(t('total'))}</td><td class="money">${fmtMoney(total)}</td><td></td><td></td></tr></tbody></table>`;
 }
 function renderReport() {
   const data = reportData;

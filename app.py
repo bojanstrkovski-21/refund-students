@@ -14,8 +14,7 @@ from reports import reports_bp
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
-if hasattr(app, 'json'):
-    app.json.ensure_ascii = False
+app.config['JSON_AS_ASCII'] = False
 app.register_blueprint(reports_bp)
 
 
@@ -61,8 +60,8 @@ def parse_embg(value):
     if not raw:
         return None, False, None
     number, error = reject_spaces(raw, 'embg_spaces', 'embg_digits')
-    if error:
-        return None, False, error
+    if error or not number:
+        return None, False, error or 'embg_digits'
     if len(number) != 13:
         return None, False, 'embg_length'
     day = int(number[0:2])
@@ -79,8 +78,8 @@ def parse_account(value):
     if not raw:
         return None, None
     number, error = reject_spaces(raw, 'account_spaces', 'account_digits')
-    if error:
-        return None, error
+    if error or not number:
+        return None, error or 'account_digits'
     if len(number) != 15:
         return None, 'account_length'
     return number, None
@@ -182,11 +181,11 @@ def parse_bill(item):
     if not isinstance(item, dict):
         return None, 'bad_bill'
     bill_date, error = parse_date(item.get('bill_date'))
-    if error:
-        return None, error
+    if error or not bill_date:
+        return None, error or 'date_required'
     amount, error = parse_amount(item.get('amount'))
-    if error:
-        return None, error
+    if error or amount is None:
+        return None, error or 'amount_required'
     bill_id = item.get('id')
     if bill_id in (None, '', 0, '0'):
         bill_id = None
@@ -202,6 +201,7 @@ def parse_bill(item):
         'note': clean(item.get('note')) or None,
         'year': int(bill_date[:4]),
         'month': int(bill_date[5:7]),
+        'paid': 1 if item.get('paid') in (True, 1, '1') else 0,
     }, None
 
 
@@ -261,8 +261,8 @@ def find_duplicate(identity, skip_id=None):
 def insert_bills(db, student_id, bills):
     for bill in bills:
         db.execute(
-            '''INSERT INTO bills (student_id, bill_date, amount, note, year, month)
-               VALUES (?, ?, ?, ?, ?, ?)''',
+            '''INSERT INTO bills (student_id, bill_date, amount, note, year, month, paid)
+               VALUES (?, ?, ?, ?, ?, ?, 0)''',
             (student_id, bill['bill_date'], bill['amount'], bill['note'], bill['year'], bill['month'])
         )
 
@@ -287,10 +287,13 @@ def replace_month_bills(db, student_id, year, month, bills):
         if bill['id'] not in existing:
             return 'bad_bill'
         kept.add(bill['id'])
+        old = existing[bill['id']]
+        changed = old['bill_date'] != bill['bill_date'] or abs(old['amount'] - bill['amount']) > 0.009
+        paid = 0 if changed else bill['paid']
         db.execute(
-            '''UPDATE bills SET bill_date=?, amount=?, note=?, year=?, month=?
+            '''UPDATE bills SET bill_date=?, amount=?, note=?, year=?, month=?, paid=?
                WHERE id=? AND student_id=?''',
-            (bill['bill_date'], bill['amount'], bill['note'], bill['year'], bill['month'],
+            (bill['bill_date'], bill['amount'], bill['note'], bill['year'], bill['month'], paid,
              bill['id'], student_id)
         )
     for bill_id in existing:
@@ -467,11 +470,11 @@ def get_student(student_id):
 def create_student():
     data = request.get_json(silent=True) or {}
     identity, error = parse_identity(data)
-    if error:
-        return fail(error)
+    if error or not identity:
+        return fail(error or 'bad_bill')
     bills, error = parse_bills(data)
-    if error:
-        return fail(error)
+    if error or bills is None:
+        return fail(error or 'bad_bill')
     if find_duplicate(identity):
         return fail('duplicate', 409)
     db = get_db()
@@ -491,13 +494,13 @@ def create_student():
 def update_student(student_id):
     data = request.get_json(silent=True) or {}
     identity, error = parse_identity(data)
-    if error:
-        return fail(error)
+    if error or not identity:
+        return fail(error or 'bad_bill')
     bills = None
     if 'bills' in data:
         bills, error = parse_bills(data)
-        if error:
-            return fail(error)
+        if error or bills is None:
+            return fail(error or 'bad_bill')
     if not student_row(student_id):
         return fail('not_found', 404)
     if find_duplicate(identity, student_id):
@@ -509,10 +512,10 @@ def update_student(student_id):
         (identity['last_name'], identity['first_name'], identity['parent_name'], identity['class_name'],
          identity['parent_embg'], identity['bank_account'], identity['notes'], student_id)
     )
-    if 'bills' in data:
+    if bills is not None:
         year, month, error = bill_period(data)
-        if error:
-            return fail(error)
+        if error or year is None or month is None:
+            return fail(error or 'bad_month')
         error = replace_month_bills(db, student_id, year, month, bills)
         if error:
             db.rollback()
