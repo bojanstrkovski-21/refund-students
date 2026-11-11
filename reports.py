@@ -48,23 +48,29 @@ def with_bank(row):
     return item
 
 
-def totals(db, year, month=None):
-    if month is None:
-        row = db.execute(
-            '''SELECT COUNT(*) AS bill_count,
-                      COUNT(DISTINCT student_id) AS student_count,
-                      ROUND(COALESCE(SUM(amount), 0), 2) AS total
-               FROM bills WHERE year = ?''',
-            (year,)
-        ).fetchone()
-    else:
-        row = db.execute(
-            '''SELECT COUNT(*) AS bill_count,
-                      COUNT(DISTINCT student_id) AS student_count,
-                      ROUND(COALESCE(SUM(amount), 0), 2) AS total
-               FROM bills WHERE year = ? AND month = ?''',
-            (year, month)
-        ).fetchone()
+def paid_filter(args):
+    value = clean(args.get('paid'))
+    if value in ('0', '1'):
+        return int(value)
+    return None
+
+
+def totals(db, year, month=None, paid=None):
+    clauses = ['year = ?']
+    params = [year]
+    if month is not None:
+        clauses.append('month = ?')
+        params.append(month)
+    if paid is not None:
+        clauses.append('paid = ?')
+        params.append(paid)
+    row = db.execute(
+        f'''SELECT COUNT(*) AS bill_count,
+                  COUNT(DISTINCT student_id) AS student_count,
+                  ROUND(COALESCE(SUM(amount), 0), 2) AS total
+           FROM bills WHERE {' AND '.join(clauses)}''',
+        params
+    ).fetchone()
     return dict(row)
 
 
@@ -84,12 +90,15 @@ def payment_state(db, year, month, current):
     return state
 
 
-def students_for_period(db, year, month=None):
+def students_for_period(db, year, month=None, paid=None):
     where = 'b.year = ?'
     params = [year]
     if month is not None:
         where += ' AND b.month = ?'
         params.append(month)
+    if paid is not None:
+        where += ' AND b.paid = ?'
+        params.append(paid)
     rows = db.execute(f'''
         SELECT s.*,
                COUNT(b.id) AS bill_count,
@@ -103,7 +112,7 @@ def students_for_period(db, year, month=None):
     return [with_bank(row) for row in rows]
 
 
-def bills_for(db, year, month=None, student_id=None):
+def bills_for(db, year, month=None, student_id=None, paid=None):
     clauses = ['b.year = ?']
     params = [year]
     if month is not None:
@@ -112,6 +121,9 @@ def bills_for(db, year, month=None, student_id=None):
     if student_id is not None:
         clauses.append('b.student_id = ?')
         params.append(student_id)
+    if paid is not None:
+        clauses.append('b.paid = ?')
+        params.append(paid)
     rows = db.execute(f'''
         SELECT b.*, s.last_name, s.first_name, s.parent_name, s.class_name, s.parent_embg, s.bank_account
         FROM bills b
@@ -129,15 +141,18 @@ def month_summary():
     if error:
         return jsonify({'error': error, 'code': error}), 400
     db = get_db()
-    current = totals(db, year, month)
+    paid = paid_filter(request.args)
+    stamp = totals(db, year, month)
+    shown = totals(db, year, month, paid)
     return jsonify({
         'school': SCHOOL_NAME,
         'year': year,
         'month': month,
         'month_name': month_name(month),
-        'rows': students_for_period(db, year, month),
-        'totals': current,
-        'payment': payment_state(db, year, month, current),
+        'paid': paid,
+        'rows': students_for_period(db, year, month, paid),
+        'totals': shown,
+        'payment': payment_state(db, year, month, stamp),
     })
 
 
@@ -148,14 +163,17 @@ def month_bills():
     if error:
         return jsonify({'error': error, 'code': error}), 400
     db = get_db()
-    current = totals(db, year, month)
+    paid = paid_filter(request.args)
+    stamp = totals(db, year, month)
+    shown = totals(db, year, month, paid)
     groups = []
-    for student in students_for_period(db, year, month):
+    for student in students_for_period(db, year, month, paid):
         groups.append({
             **student,
             'bills': [
-                {'id': bill['id'], 'bill_date': bill['bill_date'], 'amount': bill['amount'], 'note': bill['note']}
-                for bill in bills_for(db, year, month, student['id'])
+                {'id': bill['id'], 'bill_date': bill['bill_date'], 'amount': bill['amount'],
+                 'note': bill['note'], 'paid': bill['paid']}
+                for bill in bills_for(db, year, month, student['id'], paid)
             ],
         })
     return jsonify({
@@ -164,8 +182,8 @@ def month_bills():
         'month': month,
         'month_name': month_name(month),
         'groups': groups,
-        'totals': current,
-        'payment': payment_state(db, year, month, current),
+        'totals': shown,
+        'payment': payment_state(db, year, month, stamp),
     })
 
 
@@ -182,7 +200,8 @@ def student_month():
     student = db.execute('SELECT * FROM students WHERE id = ?', (int(student_id),)).fetchone()
     if not student:
         return jsonify({'error': 'not_found', 'code': 'not_found'}), 404
-    bills = bills_for(db, year, month, int(student_id))
+    paid = paid_filter(request.args)
+    bills = bills_for(db, year, month, int(student_id), paid)
     current = totals(db, year, month)
     return jsonify({
         'school': SCHOOL_NAME,
@@ -214,6 +233,10 @@ def student_report():
     if year_value:
         clauses.append('year = ?')
         params.append(year_value)
+    paid = paid_filter(request.args)
+    if paid is not None:
+        clauses.append('paid = ?')
+        params.append(paid)
     bills = [dict(row) for row in db.execute(
         f'SELECT * FROM bills WHERE {" AND ".join(clauses)} ORDER BY bill_date, id',
         params
@@ -254,10 +277,10 @@ def year_report():
                b.month, ROUND(SUM(b.amount), 2) AS total
         FROM bills b
         JOIN students s ON s.id = b.student_id
-        WHERE b.year = ?
+        WHERE b.year = ? AND (? IS NULL OR b.paid = ?)
         GROUP BY s.id, b.month
         ORDER BY s.last_name COLLATE NOCASE, s.first_name COLLATE NOCASE, s.id
-    ''', (year,)).fetchall()
+    ''', (year, paid_filter(request.args), paid_filter(request.args))).fetchall()
     students = {}
     for row in rows:
         item = students.setdefault(row['id'], {
@@ -273,23 +296,26 @@ def year_report():
         })
         item['months'][row['month'] - 1] = row['total']
         item['total'] = round(item['total'] + row['total'], 2)
+    paid = paid_filter(request.args)
     month_rows = []
     for month in range(1, 13):
-        current = totals(db, year, month)
+        stamp = totals(db, year, month)
+        shown = totals(db, year, month, paid)
         month_rows.append({
             'month': month,
             'month_name': month_name(month),
-            'total': current['total'],
-            'student_count': current['student_count'],
-            'bill_count': current['bill_count'],
-            'payment': payment_state(db, year, month, current),
+            'total': shown['total'],
+            'student_count': shown['student_count'],
+            'bill_count': shown['bill_count'],
+            'payment': payment_state(db, year, month, stamp),
         })
     return jsonify({
         'school': SCHOOL_NAME,
         'year': year,
+        'paid': paid,
         'students': list(students.values()),
         'months': month_rows,
-        'total': round(sum(item['total'] for item in month_rows), 2),
+        'total': round(sum(item['total'] for item in students.values()), 2),
     })
 
 
@@ -375,9 +401,10 @@ def export_report():
         year, month, error = period(request.args)
         if error:
             return jsonify({'error': error, 'code': error}), 400
-        rows = students_for_period(db, year, month)
-        current = totals(db, year, month)
-        payment = payment_state(db, year, month, current)
+        paid = paid_filter(request.args)
+        rows = students_for_period(db, year, month, paid)
+        current = totals(db, year, month, paid)
+        payment = payment_state(db, year, month, totals(db, year, month))
         ws.title = 'Месечен преглед'
         headers = ['#', 'Презиме', 'Име', 'Клас', 'Родител', 'ЕМБГ', 'Трансакциска сметка', 'Банка', 'Сметки', 'Износ']
         title_block(ws, f'Месечен преглед — {month_name(month)} {year}', len(headers))
@@ -418,7 +445,7 @@ def export_report():
             ws.cell(4, index, header)
         style_header(ws, 4, len(headers))
         line = 5
-        for bill in bills_for(db, year, month):
+        for bill in bills_for(db, year, month, paid=paid_filter(request.args)):
             ws.cell(line, 1, bill['last_name'])
             ws.cell(line, 2, bill['first_name'])
             ws.cell(line, 3, bill['parent_name'])
@@ -427,7 +454,7 @@ def export_report():
             ws.cell(line, 6, 'платена' if bill.get('paid') else 'неплатена')
             ws.cell(line, 7, bill['note'] or '')
             line += 1
-        current = totals(db, year, month)
+        current = totals(db, year, month, paid_filter(request.args))
         ws.cell(line, 3, 'ВКУПНО').font = Font(bold=True)
         money_cell(ws.cell(line, 5), current['total'], bold=True)
         widths = [18, 16, 24, 14, 14, 14, 28]
@@ -454,7 +481,7 @@ def export_report():
         for index, header in enumerate(headers, 1):
             ws.cell(5, index, header)
         style_header(ws, 5, len(headers))
-        bills = bills_for(db, year, month, int(student_id))
+        bills = bills_for(db, year, month, int(student_id), paid_filter(request.args))
         for index, bill in enumerate(bills, 1):
             line = 5 + index
             ws.cell(line, 1, index)
@@ -482,6 +509,10 @@ def export_report():
         if year_value:
             clauses.append('year = ?')
             params.append(year_value)
+        paid = paid_filter(request.args)
+        if paid is not None:
+            clauses.append('paid = ?')
+            params.append(paid)
         bills = db.execute(
             f'SELECT * FROM bills WHERE {" AND ".join(clauses)} ORDER BY bill_date, id',
             params
@@ -515,10 +546,10 @@ def export_report():
         payload_rows = db.execute('''
             SELECT s.last_name, s.first_name, s.class_name, s.parent_name, b.month, ROUND(SUM(b.amount), 2) AS total
             FROM bills b JOIN students s ON s.id = b.student_id
-            WHERE b.year = ?
+            WHERE b.year = ? AND (? IS NULL OR b.paid = ?)
             GROUP BY s.id, b.month
             ORDER BY s.last_name COLLATE NOCASE, s.first_name COLLATE NOCASE, s.id
-        ''', (year,)).fetchall()
+        ''', (year, paid_filter(request.args), paid_filter(request.args))).fetchall()
         students = {}
         for row in payload_rows:
             key = (row['last_name'], row['first_name'], row['class_name'] or '', row['parent_name'])

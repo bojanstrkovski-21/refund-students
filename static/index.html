@@ -434,6 +434,14 @@
             <span class="filter-label" data-i18n="student">Ученик</span>
             <select id="reportStudent" onchange="loadReport()"></select>
           </div>
+          <div class="filter-group">
+            <span class="filter-label" data-i18n="status">Статус</span>
+            <select id="reportPaid" onchange="loadReport()">
+              <option value="" data-i18n="allStatus">Сите</option>
+              <option value="0" data-i18n="unpaid">неплатена</option>
+              <option value="1" data-i18n="paid">платена</option>
+            </select>
+          </div>
           <div class="toolbar-spacer"></div>
           <button class="btn btn-secondary btn-sm" onclick="exportReport()">↓ <span data-i18n="excel">Excel</span></button>
           <button class="btn btn-secondary btn-sm" onclick="window.print()"><span data-i18n="print">Печати</span></button>
@@ -528,7 +536,7 @@ const S = {
     save: 'Зачувај', month: 'Месец', student: 'Ученик', excel: 'Excel', print: 'Печати',
     repMonth: 'Месечен преглед', repBills: 'Сметки', repStudentMonth: 'Ученик / месец',
     repStudent: 'Ученик / родител', repYear: 'Година', pickReport: 'Изберете извештај.',
-    pickStudent: 'Изберете ученик', bills: 'Сметки', amountDen: 'Износ (ден.)',
+    pickStudent: 'Изберете ученик', bills: 'Сметки', amountDen: 'Износ (ден.)', allStatus: 'Сите',
     noStudents: 'Нема ученици.', noBills: 'Нема сметки за овој период.',
     markPaid: 'Означи го месецот како платен', remarkPaid: 'Означи повторно', unmarkPaid: 'Тргни платено',
     paidOn: 'Платено', paidBy: 'од', stale: 'Износот е сменет по исплатата.',
@@ -557,7 +565,7 @@ const S = {
     save: 'Save', month: 'Month', student: 'Student', excel: 'Excel', print: 'Print',
     repMonth: 'Month summary', repBills: 'Bills', repStudentMonth: 'Student / month',
     repStudent: 'Student / parent', repYear: 'Year', pickReport: 'Choose a report.',
-    pickStudent: 'Choose a student', bills: 'Bills', amountDen: 'Amount (MKD)',
+    pickStudent: 'Choose a student', bills: 'Bills', amountDen: 'Amount (MKD)', allStatus: 'All',
     noStudents: 'No students.', noBills: 'No bills for this period.',
     markPaid: 'Mark the whole month paid', remarkPaid: 'Mark again', unmarkPaid: 'Clear paid',
     paidOn: 'Paid', paidBy: 'by', stale: 'The amount changed after it was marked paid.',
@@ -1402,7 +1410,9 @@ function reportParams() {
   params.set('year', document.getElementById('reportYear').value || String(new Date().getFullYear()));
   params.set('month', document.getElementById('reportMonth').value || String(new Date().getMonth() + 1));
   const student = document.getElementById('reportStudent').value;
+  const paid = document.getElementById('reportPaid').value;
   if (student) params.set('student_id', student);
+  if (paid) params.set('paid', paid);
   return params;
 }
 async function loadReport() {
